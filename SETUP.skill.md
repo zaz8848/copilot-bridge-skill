@@ -138,8 +138,20 @@ cloudflared tunnel route dns <tunnelName> <用户填的 domain>
 3. Encrypt Key —— **必须留空**（如果飞书后台已经填了，让用户去清空）
 4. Verification Token（事件订阅页给的 token，可填可不填）
 
-把 1/3/4 写进 `copilot-bridge.config.json` 的 `feishu` 节；
-把 2 (App Secret) 写进 `.env` 的 `FEISHU_APP_SECRET=xxx`。
+**单文件设计：4 个值直接写进 `copilot-bridge.config.json` 的 `feishu` 节。不要创建 `.env`**。
+
+```jsonc
+{
+    "feishu": {
+        "appId": "<用户贴的 App ID>",
+        "appSecret": "<用户贴的 App Secret>",
+        "encryptKey": "",
+        "verificationToken": "<用户贴的 token>"
+    }
+}
+```
+
+**写文件务必用 `[System.IO.File]::WriteAllText(<path>, <content>, [System.Text.UTF8Encoding]::new($false))`（无 BOM UTF-8）**，用 PowerShell `Out-File` 会加 BOM 让 `JSON.parse` 崩。
 
 ### 4.3 开权限
 

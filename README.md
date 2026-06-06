@@ -93,6 +93,9 @@ Copilot 下次开会话自动激活 `copilot-bridge` skill，开始走飞书通�
 
 **配置文件**：`copilot-bridge.config.json`（你自己的，不进 git；换电脑 copy 一份就跳过引导）。
 
+> **单文件设计**：所有凭据（含 App Secret）直接写在这一份 JSON 里。`.gitignore` 已拦截，不会泄露。
+> 如果你偏好把 secret 拆到 `.env`，在 JSON 里写 `"appSecret": "${env:FEISHU_APP_SECRET}"` 即可——代码向后兼容。
+
 ---
 
 ## 三种运行模式（公网入口）
@@ -160,7 +163,7 @@ copilot-bridge-skill/
 | 字段 | 必填 | 默认值 | 说明 |
 |---|---|---|---|
 | `feishu.appId` | ✅ | - | 飞书自建应用 ID `cli_xxx` |
-| `feishu.appSecret` | ✅ | - | 推荐用 `${env:FEISHU_APP_SECRET}` 引用 .env |
+| `feishu.appSecret` | ✅ | - | 直接写凭据；或写 `${env:FEISHU_APP_SECRET}` 从 .env 读 |
 | `feishu.targetChatId` | ✅ | - | bot 跟你的单聊 chat_id `oc_xxx` |
 | `feishu.encryptKey` | ❌ | `""` | **必须留空**（不支持加密回调） |
 | `feishu.verificationToken` | ❌ | `""` | 可填可不填 |
@@ -192,7 +195,7 @@ pwsh -File scripts/doctor.ps1
 
 ## 安全提醒
 
-- `.env` / `copilot-bridge.config.json` / `bridge.db` / cloudflared 凭据 **绝不能进 git**
+- `copilot-bridge.config.json` / `bridge.db` / cloudflared 凭据 **绝不能进 git**
   （`.gitignore` 已默认排除）
 - 每个用户必须自建飞书 App，**不要共享 App Secret**（一旦泄漏，任何人能冒充你 bot 发消息）
 - cloudflared 默认只暴露 `/webhook/feishu` 和 `/health`，其它路径返 404
