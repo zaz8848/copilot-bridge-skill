@@ -291,13 +291,30 @@ mode=B 的话：URL 就是 `https://<你的 domain>`，cloudflared service 已�
 
 注册 Windows 计划任务 `CopilotBridgeCore`，登录时自启。
 
-### 7.2 装全局 SKILL.md
+### 7.2 装全局 SKILL.md（user-level skill）
 
 ```powershell
 .\install.ps1 -Mode SkillOnly
 ```
 
-把 `SKILL.md` 拷到 `%APPDATA%\Code\User\prompts\skills\copilot-bridge\` —— 任何 workspace 的 Copilot 都能自动发现。
+**目标路径（官方 personal skills 位置，VS Code 文档钦定）**：
+- `copilot-bridge` 主 skill → `$HOME\.copilot\skills\copilot-bridge\SKILL.md`
+- `copilot-bridge-setup` 安装 skill → `$HOME\.copilot\skills\copilot-bridge-setup\SKILL.md`
+
+> ⚠️ **坑（必读，下一个用户不要再踩）**：
+> - 不是 `%APPDATA%\Code\User\prompts\skills\...` —— 那是 prompts 目录，VS Code 不当 skill 加载，扔进去等于死文件
+> - 每个 skill **必须**独立目录 + 文件名必须叫 `SKILL.md`；不能多个 skill 塞同一目录、也不能叫 `SETUP.skill.md` 之类
+> - YAML frontmatter 的 `name` 字段必须跟父目录名完全一致（`copilot-bridge` 目录 → `name: copilot-bridge`）
+> - 官方 personal skills 还认 `~/.claude/skills/` 和 `~/.agents/skills/`，但我们统一用 `~/.copilot/skills/`
+> - 装完让用户在命令面板跑 `Developer: Reload Window`，然后在 Chat 输入 `/` 应能看到 `copilot-bridge` 和 `copilot-bridge-setup` 两条；看不到 = 路径错或文件名错
+
+**install.ps1 应当做的事**（如果还没实现，按这个逻辑写）：
+```powershell
+$target = Join-Path $HOME '.copilot\skills'
+New-Item -ItemType Directory -Force -Path "$target\copilot-bridge","$target\copilot-bridge-setup" | Out-Null
+Copy-Item "$PSScriptRoot\skills\copilot-bridge\SKILL.md"       "$target\copilot-bridge\SKILL.md"       -Force
+Copy-Item "$PSScriptRoot\skills\copilot-bridge-setup\SKILL.md" "$target\copilot-bridge-setup\SKILL.md" -Force
+```
 
 ### 7.3 Dashboard 快捷方式
 

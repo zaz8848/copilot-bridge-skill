@@ -21,6 +21,9 @@ bridge.db-shm
 bridge.db-wal
 images/inbound_*
 *.log
+doctor*.txt
+doctor*.out
+Dashboard.url
 
 # 仓库根的 Dashboard 快捷方式（install.ps1 生成的）
 Copilot Bridge Dashboard.url

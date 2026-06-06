@@ -2,7 +2,7 @@
 # scripts/doctor.ps1
 #
 # 自检 copilot-bridge 当前环境状态，输出 **严格 JSON** 到 stdout。
-# 给 AI（SETUP.skill.md 安装剧本）读，决定下一步该装什么。
+# 给 AI（copilot-bridge-setup skill 安装剧本）读，决定下一步该装什么。
 #
 # 用法：
 #   pwsh -File scripts/doctor.ps1
@@ -140,12 +140,12 @@ catch {
     # 没起来很正常
 }
 
-# ---------------- skill 全局安装 ----------------
-$promptsDir = Join-Path $env:APPDATA 'Code\User\prompts\skills\copilot-bridge'
+# ---------------- skill 全局安装（VS Code 官方 personal skills 路径）----------------
+$skillsRoot = Join-Path $HOME '.copilot\skills'
 $skill = @{
-    promptsDir          = $promptsDir
-    skillInstalled      = Test-Path (Join-Path $promptsDir 'SKILL.md')
-    setupSkillInstalled = Test-Path (Join-Path $promptsDir 'SETUP.skill.md')
+    skillsRoot          = $skillsRoot
+    skillInstalled      = Test-Path (Join-Path $skillsRoot 'copilot-bridge\SKILL.md')
+    setupSkillInstalled = Test-Path (Join-Path $skillsRoot 'copilot-bridge-setup\SKILL.md')
 }
 
 # ---------------- 汇总 ready ----------------

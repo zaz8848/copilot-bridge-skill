@@ -21,5 +21,5 @@ project_name: <你的项目名，留空就用 workspace 文件夹名>
 - skill 立刻停用，对话回 VS Code Chat
 
 ## 进阶
-- skill 完整规则：`%APPDATA%\Code\User\prompts\skills\copilot-bridge\SKILL.md`
+- skill 完整规则：`~/.copilot/skills/copilot-bridge/SKILL.md`
 - 自检：在 copilot-bridge-skill 仓库根目录跑 `scripts/doctor.ps1`

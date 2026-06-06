@@ -54,9 +54,13 @@ pwsh -File install.ps1
 ```
 
 它会：
-1. 把 `SKILL.md` + `SETUP.skill.md` 拷到 `%APPDATA%\Code\User\prompts\skills\copilot-bridge\`
+1. 把两个 skill 拷到 VS Code 官方 personal skills 路径：
+   - `~/.copilot/skills/copilot-bridge/SKILL.md`
+   - `~/.copilot/skills/copilot-bridge-setup/SKILL.md`
 2. 设置环境变量 `COPILOT_BRIDGE_HOME` 指向当前仓库
 3. 提示你下一步
+
+> 装完在 VS Code 命令面板跑 `Developer: Reload Window`，然后 Chat 输入 `/` 应能看到 `copilot-bridge` 和 `copilot-bridge-setup` 两条。
 
 ### Step 3：在 VS Code 里让 AI 帮你装
 
@@ -66,7 +70,7 @@ pwsh -File install.ps1
 帮我装一下 copilot-bridge
 ```
 
-AI 会自动读取 `SETUP.skill.md` 一步一步引导你：
+AI 会自动加载 `copilot-bridge-setup` skill 一步一步引导你：
 - 装 Node.js 22 LTS（**必须 22.x**，better-sqlite3 v12 的 prebuild 矩阵覆盖 Node 22/24，不覆盖 Node 20，否则强制源码编译要 MSVC + Python） / pnpm / cloudflared
 - 引导你去飞书后台创建自建应用（自动弹浏览器）
 - 收你飞书 App 凭据，写到 `.env` / `copilot-bridge.config.json`
@@ -128,8 +132,9 @@ copilot-bridge-skill/
 ├── README.md                              ← 你正在看
 ├── LICENSE                                ← MIT
 ├── install.ps1                            ← 用户入口
-├── SETUP.skill.md                         ← AI 安装剧本（拷到 user prompts）
-├── SKILL.md                               ← AI 运行规则（拷到 user prompts）
+├── skills/
+│   ├── copilot-bridge/SKILL.md            ← AI 运行规则（装到 ~/.copilot/skills/）
+│   └── copilot-bridge-setup/SKILL.md      ← AI 安装剧本（装到 ~/.copilot/skills/）
 ├── copilot-bridge.config.example.json     ← 配置模板（带字段注释）
 ├── .env.example                           ← secret 模板
 ├── .gitignore                             ← 排除 .env / bridge.db / config.json
@@ -253,7 +258,8 @@ powershell.exe -ExecutionPolicy Bypass -File install.ps1
 
 ```powershell
 # 1. 卸全局 skill
-Remove-Item -Recurse -Force "$env:APPDATA\Code\User\prompts\skills\copilot-bridge"
+Remove-Item -Recurse -Force "$HOME\.copilot\skills\copilot-bridge"
+Remove-Item -Recurse -Force "$HOME\.copilot\skills\copilot-bridge-setup"
 
 # 2. 删环境变量
 [Environment]::SetEnvironmentVariable('COPILOT_BRIDGE_HOME', $null, 'User')
