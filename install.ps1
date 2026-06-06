@@ -2,7 +2,8 @@
 # install.ps1 — copilot-bridge-skill 用户入口
 #
 # 用户唯一要做的事：在仓库根目录右键 → "用 PowerShell 运行"，或：
-#   pwsh -File install.ps1
+#   powershell -ExecutionPolicy Bypass -File install.ps1
+#   （PowerShell 5.1 上 Windows 默认装；PS 7+ 用 `pwsh -File install.ps1` 也行）
 #
 # 做两件事：
 #   1. 把两个 skill 拷到官方 personal skills 路径：
@@ -84,7 +85,7 @@ if ($configExists) {
     Write-Host ''
     Write-Host '检测到 copilot-bridge.config.json 已存在（你可能是换电脑 copy 过来）。' -ForegroundColor Cyan
     Write-Host '建议跑自检确认环境完整：' -ForegroundColor Cyan
-    Write-Host "  pwsh -File `"$repoRoot\scripts\doctor.ps1`"" -ForegroundColor White
+    Write-Host "  powershell -File `"$repoRoot\scripts\doctor.ps1`"" -ForegroundColor White
 }
 else {
     Write-Host ''

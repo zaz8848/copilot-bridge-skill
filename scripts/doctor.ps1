@@ -5,7 +5,8 @@
 # 给 AI（copilot-bridge-setup skill 安装剧本）读，决定下一步该装什么。
 #
 # 用法：
-#   pwsh -File scripts/doctor.ps1
+#   powershell -File scripts\doctor.ps1
+#   （PowerShell 5.1 上 Windows 默认装；PS 7 用 pwsh 也行）
 #
 # 退出码：
 #   0 = 所有检查完成（不代表全 OK，AI 读 JSON 看 ready 字段）

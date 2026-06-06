@@ -1,5 +1,5 @@
 ﻿# 自动打开飞书 App 事件订阅配置页
-# 用法：pwsh -File scripts/open-feishu-events.ps1 -AppId cli_xxxxxxxxxxxxxxxx
+# 用法：powershell -File scripts\open-feishu-events.ps1 -AppId cli_xxxxxxxxxxxxxxxx
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]

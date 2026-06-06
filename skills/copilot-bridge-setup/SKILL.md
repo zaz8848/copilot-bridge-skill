@@ -32,7 +32,7 @@ applyTo: '**'
 ## Step 0：自检定位
 
 ```powershell
-pwsh -File scripts/doctor.ps1
+powershell -File scripts\doctor.ps1
 ```
 
 解析输出 JSON 的 `nextStep` 字段：

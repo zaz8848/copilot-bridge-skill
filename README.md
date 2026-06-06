@@ -47,9 +47,9 @@ cd copilot-bridge-skill
 ### Step 2：跑安装器
 
 ```powershell
-# 推荐用 PowerShell 7+（pwsh）。如果只有 PowerShell 5.1（Windows 默认）：
-powershell.exe -ExecutionPolicy Bypass -File install.ps1
-# PowerShell 7+：
+# Windows 默认 PowerShell 5.1（推荐）
+powershell -ExecutionPolicy Bypass -File install.ps1
+# 装了 PowerShell 7+ 也可以
 pwsh -File install.ps1
 ```
 
@@ -198,7 +198,7 @@ copilot-bridge-skill/
 ## 自检 & 故障排查
 
 ```powershell
-pwsh -File scripts/doctor.ps1
+powershell -File scripts\doctor.ps1
 ```
 
 输出 JSON，关键字段：
