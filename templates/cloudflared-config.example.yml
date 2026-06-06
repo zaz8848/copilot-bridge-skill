@@ -1,0 +1,16 @@
+# Cloudflared 命名隧道配置示例
+# 路径：C:\ProgramData\Cloudflared\config.yml
+#
+# 用法：填好后跑 scripts/install-cloudflared-service.ps1 注册 Windows 服务
+#
+# 安全：ingress 路径白名单只暴露飞书 webhook + health，其它路径返 404
+
+tunnel: <填你的隧道 UUID，cloudflared tunnel create 后输出>
+credentials-file: C:\ProgramData\Cloudflared\<你的隧道 UUID>.json
+
+# 路径白名单（Plan 3 安全收紧）
+ingress:
+  - hostname: <你的域名，如 copilot-bridge.example.com>
+    path: ^/(webhook/feishu|health)$
+    service: http://localhost:3000
+  - service: http_status:404

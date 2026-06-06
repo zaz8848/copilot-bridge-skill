@@ -1,0 +1,32 @@
+{
+    "$schema": "./copilot-bridge.config.schema.json",
+    "_comment_feishu": "===== 蹇呭～锛氶涔﹁嚜寤哄簲鐢ㄥ嚟鎹€俿ecret 绫诲瓧娈靛缓璁敤 ${env:XXX} 寮曠敤 .env锛岄伩鍏嶆彁浜よ繘 git =====",
+    "feishu": {
+        "appId": "cli_xxxxxxxxxxxxxxxx",
+        "appSecret": "${env:FEISHU_APP_SECRET}",
+        "targetChatId": "oc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "encryptKey": "",
+        "verificationToken": ""
+    },
+    "_comment_publicEndpoint": "===== 蹇呭～锛氬叕缃戝叆鍙ｆā寮?=====  temp-tunnel=trycloudflare 涓存椂锛堟瘡娆￠噸鍚崲 URL锛岃鏇存柊椋炰功鍚庡彴锛?/ named-tunnel=鑷湁鍩熷悕 cloudflared锛堜竴娆￠厤濂芥案涓嶆崲锛?/ manual=鐢ㄦ埛鑷繁鎼炲弽鍚戜唬鐞?,
+    "publicEndpoint": {
+        "mode": "temp-tunnel",
+        "domain": "",
+        "tunnelName": ""
+    },
+    "_comment_server": "===== 鍙€夛細鏈嶅姟鐩戝惉 =====  榛樿 127.0.0.1:3000锛屽彧鏈満鍙闂紱鍏綉鍏ュ彛璧?cloudflared 鍙嶄唬",
+    "server": {
+        "port": 3000,
+        "host": "127.0.0.1"
+    },
+    "_comment_paths": "===== 鍙€夛細鏁版嵁鏂囦欢浣嶇疆 =====  鐩稿浠撳簱鏍?,
+    "paths": {
+        "dbFile": "./bridge.db",
+        "imageInboundDir": "./images"
+    },
+    "_comment_behavior": "===== 鍙€夛細琛屼负璋冧紭 =====",
+    "behavior": {
+        "waitPollIntervalMs": 1500,
+        "maxRetries": 3
+    }
+}

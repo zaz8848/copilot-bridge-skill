@@ -1,0 +1,30 @@
+{
+    "name": "bridge-core",
+    "version": "0.0.11",
+    "private": true,
+    "type": "module",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "dev": "tsx watch src/index.ts",
+        "start": "node dist/index.js",
+        "get-chat-id": "tsx src/scripts/get-chat-id.ts",
+        "e2e:mock": "tsx src/scripts/e2e-mock.ts",
+        "e2e:mcp": "tsx src/scripts/e2e-mcp.ts",
+        "smoke-feishu": "tsx src/scripts/smoke-feishu.ts",
+        "doctor": "tsx src/scripts/doctor.ts"
+    },
+    "dependencies": {
+        "better-sqlite3": "^11.5.0",
+        "dotenv": "^16.4.5",
+        "express": "^4.21.1",
+        "nanoid": "^5.0.7"
+    },
+    "devDependencies": {
+        "@types/better-sqlite3": "^7.6.11",
+        "@types/express": "^4.17.21",
+        "@types/node": "^20.16.0",
+        "tsx": "^4.19.0",
+        "typescript": "^5.6.0"
+    }
+}
