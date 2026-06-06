@@ -6,6 +6,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)
 ![Node](https://img.shields.io/badge/Node-20%2B-green.svg)
+![GitHub Stars](https://img.shields.io/github/stars/zaz8848/copilot-bridge-skill?style=social)
+![GitHub Forks](https://img.shields.io/github/forks/zaz8848/copilot-bridge-skill?style=social)
+![Release](https://img.shields.io/github/v/release/zaz8848/copilot-bridge-skill?include_prereleases)
 
 ---
 
