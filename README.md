@@ -200,7 +200,7 @@ pwsh -File scripts/doctor.ps1
 - `ready: true` → 全好
 - `nextStep` → 当前缺什么（`install-node` / `pnpm-build` / `start-bridge` / ...）
 
-**Dashboard**：`install.ps1` 跑完会在桌面生成 `Copilot Bridge Dashboard.url`，双击直接开 `http://127.0.0.1:3000/dashboard`，看每个项目状态 / 未读卡 / 历史回复 / 人工 reply/cancel。127.0.0.1 only，公网访问不到。
+**Dashboard**：`install.ps1` 跑完会在**仓库根目录**生成 `Copilot Bridge Dashboard.url`，双击直接开 `http://127.0.0.1:3000/dashboard`，看每个项目状态 / 未读卡 / 历史回复 / 人工 reply/cancel。127.0.0.1 only，公网访问不到。`.gitignore` 已排除，不会进 git。
 
 日常运维：[docs/OPERATIONS.md](docs/OPERATIONS.md)
 

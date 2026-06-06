@@ -22,6 +22,9 @@ bridge.db-wal
 images/inbound_*
 *.log
 
+# 仓库根的 Dashboard 快捷方式（install.ps1 生成的）
+Copilot Bridge Dashboard.url
+
 # ============================================
 # Cloudflared 凭据
 # ============================================

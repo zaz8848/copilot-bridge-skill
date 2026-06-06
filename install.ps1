@@ -56,11 +56,12 @@ Write-Host '[3/3] 下一步该干什么 ...' -ForegroundColor Yellow
 
 $configExists = Test-Path (Join-Path $repoRoot 'copilot-bridge.config.json')
 
-# 顺手装桌面 Dashboard 快捷方式（无害，无依赖）
+# 顺手装 Dashboard 快捷方式到仓库根（无害，无依赖）
 try {
     & (Join-Path $repoRoot 'scripts\install-dashboard-shortcut.ps1') | Out-Null
-    Write-Host '  ✅ 桌面已生成 Copilot Bridge Dashboard.url 快捷方式' -ForegroundColor Green
-} catch {
+    Write-Host '  ✅ 仓库根已生成 Copilot Bridge Dashboard.url 快捷方式（双击开 Dashboard）' -ForegroundColor Green
+}
+catch {
     Write-Host "  ⚠  Dashboard 快捷方式生成失败：$_" -ForegroundColor Yellow
 }
 Write-Host ''
@@ -70,7 +71,8 @@ if ($configExists) {
     Write-Host '检测到 copilot-bridge.config.json 已存在（你可能是换电脑 copy 过来）。' -ForegroundColor Cyan
     Write-Host '建议跑自检确认环境完整：' -ForegroundColor Cyan
     Write-Host "  pwsh -File `"$repoRoot\scripts\doctor.ps1`"" -ForegroundColor White
-} else {
+}
+else {
     Write-Host ''
     Write-Host '检测到首次安装（没有 copilot-bridge.config.json）。' -ForegroundColor Cyan
     Write-Host '推荐流程：' -ForegroundColor Cyan
@@ -92,7 +94,8 @@ if ($Mode -eq 'All' -and -not $configExists) {
         try {
             Start-Process 'code' -ArgumentList "`"$repoRoot`""
             Write-Host '  ✅ VS Code 已启动' -ForegroundColor Green
-        } catch {
+        }
+        catch {
             Write-Host "  ⚠  打不开 VS Code（命令 'code' 不在 PATH）。请手动打开 $repoRoot" -ForegroundColor Yellow
         }
     }
