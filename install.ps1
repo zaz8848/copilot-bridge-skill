@@ -56,6 +56,15 @@ Write-Host '[3/3] 下一步该干什么 ...' -ForegroundColor Yellow
 
 $configExists = Test-Path (Join-Path $repoRoot 'copilot-bridge.config.json')
 
+# 顺手装桌面 Dashboard 快捷方式（无害，无依赖）
+try {
+    & (Join-Path $repoRoot 'scripts\install-dashboard-shortcut.ps1') | Out-Null
+    Write-Host '  ✅ 桌面已生成 Copilot Bridge Dashboard.url 快捷方式' -ForegroundColor Green
+} catch {
+    Write-Host "  ⚠  Dashboard 快捷方式生成失败：$_" -ForegroundColor Yellow
+}
+Write-Host ''
+
 if ($configExists) {
     Write-Host ''
     Write-Host '检测到 copilot-bridge.config.json 已存在（你可能是换电脑 copy 过来）。' -ForegroundColor Cyan

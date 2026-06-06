@@ -299,6 +299,16 @@ mode=B 的话：URL 就是 `https://<你的 domain>`，cloudflared service 已�
 
 把 `SKILL.md` 拷到 `%APPDATA%\Code\User\prompts\skills\copilot-bridge\` —— 任何 workspace 的 Copilot 都能自动发现。
 
+### 7.3 桌面 Dashboard 快捷方式
+
+```powershell
+.\scripts\install-dashboard-shortcut.ps1
+```
+
+在桌面生成 `Copilot Bridge Dashboard.url`，双击直接开浏览器到 `http://127.0.0.1:3000/dashboard`。
+Dashboard 显示：每个 project_name 的状态 / 未读卡 / 历史回复 / 人工 reply/cancel 按钮。
+127.0.0.1 only，公网访问不到。
+
 ---
 
 ## Step 8：收尾告知
