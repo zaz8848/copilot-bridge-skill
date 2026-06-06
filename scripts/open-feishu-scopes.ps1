@@ -16,6 +16,6 @@ $scopes = @(
 ) -join ','
 
 $url = "https://open.feishu.cn/app/$AppId/auth?q=$scopes&op_from=openapi&token_type=tenant"
-Start-Process $url
-Write-Host "[open-feishu-scopes] 已弹出浏览器，6 个权限已自动选中" -ForegroundColor Green
+Write-Host "OPEN_URL: $url"
+Write-Host "[open-feishu-scopes] 飞书权限申请页（6 个权限已勾选）" -ForegroundColor Green
 Write-Host '请点【Add Scopes】→ 立即生效（个人租户秒批，不需要发版）' -ForegroundColor Yellow

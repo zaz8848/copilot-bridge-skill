@@ -22,10 +22,10 @@ applyTo: '**'
 4. **每步完成立刻跑 `scripts/doctor.ps1` 重新自检**，决定下一步
 5. **失败时**：把错误粘出来 + 给 2-3 个可能原因 + 问"自动重试 / 跳过 / 退出"
 6. **打开任何网页一律用 VS Code 内置浏览器（Simple Browser），禁止跳系统外部浏览器**
-   - 正确做法：`run_vscode_command` 调 `simpleBrowser.show` 传 URL；或 `run_in_terminal` 调 `code --command "simpleBrowser.show?<URL>"`
+   - 正确做法：`run_vscode_command` 调 `simpleBrowser.show` 传 URL
    - 禁止：`Start-Process <url>` / `Start-Process 'msedge' <url>` / `Start-Process 'chrome' <url>` / 让用户自己复制 URL 去外部浏览器
    - 原因：用户全程在 VS Code 内完成安装，不被弹外部窗口打断；飞书 / Cloudflare / 文档页都能在 Simple Browser 里完成登录和配置
-   - **现存脚本**（`scripts/open-feishu-app.ps1` / `open-feishu-scopes.ps1` / `open-feishu-events.ps1` / `open-cloudflare-dash.ps1` / `set-feishu-webhook-url.ps1` 等）如果内部还在用 `Start-Process <url>`，**AI 不要直接调脚本**——改成自己从脚本里抠出 URL，然后用 `simpleBrowser.show` 打开。后续这些脚本会重构
+   - **`scripts/open-*.ps1` 和 `set-feishu-webhook-url.ps1` 的协议**：脚本不再自动开浏览器，只在 stdout 打印一行 `OPEN_URL: <url>`。AI 跑完脚本 → 用正则 `^OPEN_URL: (.+)$` 抠出 URL → 调 `simpleBrowser.show` 在 VS Code 内打开
 
 ---
 

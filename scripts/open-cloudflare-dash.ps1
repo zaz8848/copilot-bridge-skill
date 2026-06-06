@@ -1,7 +1,10 @@
-﻿# 自动打开 Cloudflare Dashboard
+﻿# 输出 Cloudflare Dashboard URL（不再跳系统浏览器）
+# AI 解析 `OPEN_URL:` 行后用 VS Code Simple Browser (simpleBrowser.show) 打开。
+# 独立运行时，用户自己复制下面的 URL。
 # 用法：pwsh -File scripts/open-cloudflare-dash.ps1
-Start-Process 'https://dash.cloudflare.com/'
-Write-Host '[open-cloudflare-dash] 已弹出浏览器：Cloudflare Dashboard' -ForegroundColor Green
+$url = 'https://dash.cloudflare.com/'
+Write-Host "OPEN_URL: $url"
+Write-Host '[open-cloudflare-dash] Cloudflare Dashboard' -ForegroundColor Green
 Write-Host '如果是首次用 named-tunnel：' -ForegroundColor Yellow
 Write-Host '  1. 注册 / 登录 Cloudflare 账号（免费）' -ForegroundColor Yellow
 Write-Host '  2. 添加你的域名到 Sites（Free 方案）' -ForegroundColor Yellow
