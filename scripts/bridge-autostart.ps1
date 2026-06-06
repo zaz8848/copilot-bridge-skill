@@ -1,47 +1,41 @@
-﻿# bridge-core 开机自启脚本（被 Windows 计划任务调用）
-#
-# 注册方式见 scripts/install-bridge-autostart.ps1
-# 卸载方式：Unregister-ScheduledTask -TaskName "CopilotBridgeCore" -Confirm:$false
+﻿#requires -Version 5.1
+<#
+.SYNOPSIS
+    bridge-core 开机自启脚本。由计划任务 CopilotBridgeCore 在用户登录时调用。
 
-$ErrorActionPreference = "Stop"
-$repo = "D:\A_Code\Copilot Bridge"
-$log = "$repo\bridge-core.log"
-$node = "C:\Program Files\nodejs\node.exe"
-$entry = "$repo\bridge-core\dist\index.js"
+.DESCRIPTION
+    通用版（v0.0.45+）—— 仓库路径自动从脚本所在位置推导，不再硬编码。
 
-# 1) 已在 3000 跑就退出，避免重复起
-try {
-    $r = Invoke-RestMethod -Uri "http://127.0.0.1:3000/health" -TimeoutSec 2 -ErrorAction Stop
-    if ($r.ok) {
-        "[bridge-autostart] $(Get-Date -Format o) skip: already running version=$($r.version)" | Out-File -Append -Encoding utf8 "$repo\bridge-autostart.log"
-        exit 0
-    }
-}
-catch { }
+    流程：
+    1. 推导仓库根 = 本脚本上一级目录
+    2. cd 到 bridge-core
+    3. node dist/index.js 启动（stderr 写日志到仓库根 bridge-core.log）
+#>
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$ErrorActionPreference = "Continue"
 
-# 2) 起 node
-"[bridge-autostart] $(Get-Date -Format o) starting bridge-core..." | Out-File -Append -Encoding utf8 "$repo\bridge-autostart.log"
-# Start-Process 的 ArgumentList 给单字符串时不会自动 quote 带空格的路径，必须显式打引号
-$p = Start-Process -FilePath $node -ArgumentList "`"$entry`"" `
-    -WorkingDirectory $repo `
-    -PassThru `
-    -RedirectStandardError $log `
-    -WindowStyle Hidden
-"[bridge-autostart] started pid=$($p.Id)" | Out-File -Append -Encoding utf8 "$repo\bridge-autostart.log"
+# 仓库根 = scripts/ 的父目录
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$bridgeCoreDir = Join-Path $repoRoot 'bridge-core'
+$entryPoint = Join-Path $bridgeCoreDir 'dist\index.js'
+$logFile = Join-Path $repoRoot 'bridge-core.log'
 
-# 3) 等 health
-$ready = $false
-for ($i = 0; $i -lt 20; $i++) {
-    Start-Sleep -Seconds 1
-    try {
-        $r = Invoke-RestMethod -Uri "http://127.0.0.1:3000/health" -TimeoutSec 2 -ErrorAction Stop
-        if ($r.ok) { $ready = $true; break }
-    }
-    catch {}
+Set-Location $bridgeCoreDir
+
+# 找 node.exe
+$nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+if (-not $nodeCmd) {
+    "[$(Get-Date)] FATAL: node not in PATH" | Out-File $logFile -Append -Encoding utf8
+    exit 1
 }
-if ($ready) {
-    "[bridge-autostart] $(Get-Date -Format o) READY version=$($r.version)" | Out-File -Append -Encoding utf8 "$repo\bridge-autostart.log"
+
+if (-not (Test-Path $entryPoint)) {
+    "[$(Get-Date)] FATAL: $entryPoint not found. Run 'pnpm build' first." | Out-File $logFile -Append -Encoding utf8
+    exit 2
 }
-else {
-    "[bridge-autostart] $(Get-Date -Format o) NOT READY after 20s, look at $log" | Out-File -Append -Encoding utf8 "$repo\bridge-autostart.log"
-}
+
+"[$(Get-Date)] starting bridge-core: $entryPoint" | Out-File $logFile -Append -Encoding utf8
+
+# 启动 node，stderr 和 stdout 都写日志
+& $nodeCmd.Source $entryPoint *>> $logFile

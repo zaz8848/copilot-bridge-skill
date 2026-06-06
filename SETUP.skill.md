@@ -45,19 +45,33 @@ pwsh -File scripts/doctor.ps1
 
 ---
 
-## Step 1：装 Node.js 20+ 和 pnpm
+## Step 1：装 Node.js 22 LTS（**最佳兼容**） 和 pnpm
 
 ```powershell
 # 检测
-node -v  # 如果没装或 < v20
+node -v  # 期望 v22.x
 
-# 装（管理员权限）
-winget install OpenJS.NodeJS.LTS
+# better-sqlite3 v12 的 prebuild 矩阵覆盖：Node 22 / Node 24 ✅，Node 20 ❌
+# 不要装 Node 20（v12 prebuild 不覆盖，会强制源码编译要 MSVC + Python）
+# 不要装 Node 21/23（odd LTS 不稳定）
+winget install OpenJS.NodeJS --version 22.11.0
+
 # pnpm
 Invoke-WebRequest https://get.pnpm.io/install.ps1 -UseBasicParsing | Invoke-Expression
+
+# 刷新当前 shell 的 PATH（不用重启终端）
+$env:PATH = [Environment]::GetEnvironmentVariable('PATH','Machine') + ';' +
+            [Environment]::GetEnvironmentVariable('PATH','User')
+
+# 一次性放开 PowerShell 脚本执行权限（仅当前用户）
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
 ```
 
-装完让用户 **重启 PowerShell 终端**（PATH 才会刷新），然后回 Step 0 重检。
+装完跑 `node -v` 验证拿到 v22.x，回 Step 0 重检。
+
+**如果你装错了 Node 版本**：
+- 卡在 `pnpm install` 时报 `gyp ERR! find VS` → 说明 better-sqlite3 prebuild 不命中
+- 修法：`winget uninstall OpenJS.NodeJS`，重装到 22.x
 
 ---
 
@@ -93,6 +107,10 @@ C) 手动 / 其他反代（高级用户）
 
 ```powershell
 winget install Cloudflare.cloudflared
+
+# 刷新当前 shell PATH
+$env:PATH = [Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH','User')
+cloudflared --version  # 验证
 ```
 
 如果选了 mode=B（named-tunnel），还要：
@@ -109,10 +127,18 @@ cloudflared tunnel create <用户填的 tunnelName>
 # 3.3 DNS 路由
 cloudflared tunnel route dns <tunnelName> <用户填的 domain>
 
-# 3.4 写 config.yml 到 C:\ProgramData\Cloudflared\（要管理员）
-# 3.5 装 Windows 服务
-.\scripts\install-cloudflared-service.ps1
+# 3.4 把 cert.pem 和 <UUID>.json 从 ~/.cloudflared/ 拷到 C:\ProgramData\Cloudflared\
+# 3.5 写 config.yml 到 C:\ProgramData\Cloudflared\（用 templates/cloudflared-config.example.yml 改）
+# 3.6 装 Windows 服务（管理员 PowerShell！）
+#     注意：这个脚本会自动解析 winget shim 找真实 cloudflared.exe + 强制重写 binPath，
+#     避免常见的"服务跑了但隧道没连接"问题
+Start-Process powershell -Verb RunAs -ArgumentList "-NoExit","-File","$PWD\scripts\install-cloudflared-service.ps1"
 ```
+
+**已知坑（P1 #8 #9 历史踩过）**：
+- cloudflared 装 service 时，winget 给的是 `WinGet\Links\cloudflared.exe` shim，shim 不会把 service install 时的参数透传 → 服务进程跑成空壳，公网返 530
+- 第二次装会撞到上次留下的 `EventLog\Application\Cloudflared` 注册表残留 → install 直接报 "registry key already exists"
+- 我们的 `install-cloudflared-service.ps1` 已经处理这两个问题，**不要绕过它直接 `cloudflared service install`**
 
 ---
 
@@ -183,13 +209,14 @@ pnpm get-chat-id
 ```powershell
 cd bridge-core
 pnpm install
-# pnpm 11+ 默认拒绝跑 native build，必须显式批准 better-sqlite3 + esbuild
-pnpm approve-builds   # 交互选 better-sqlite3, esbuild → y 全部
+# v0.0.45+ 已 ship pnpm-workspace.yaml 配 onlyBuiltDependencies，
+# 不会再出现 ERR_PNPM_IGNORED_BUILDS。如果还是报错（用户改了 lockfile），手动跑：
+pnpm approve-builds --all   # 非交互；pnpm 11+ 推荐
 pnpm build
 ```
 
 **已知坑 1**：`pnpm install` 末尾若出现 `ERR_PNPM_IGNORED_BUILDS: better-sqlite3, esbuild` →
-跑 `pnpm approve-builds` 把这两个加白名单后重新 `pnpm install`，否则启动时报
+跑 `pnpm approve-builds --all` 把这两个加白名单后重新 `pnpm install`，否则启动时报
 `Could not locate the bindings file` (`better_sqlite3.node`)。
 
 **已知坑 2**：`copilot-bridge.config.json` 必须是无 BOM 的 UTF-8。
@@ -244,7 +271,13 @@ mode=B 的话：URL 就是 `https://<你的 domain>`，cloudflared service 已�
 .\ps-client\feishu-send-and-wait.ps1 -Message "安装测试，请回个 ok" -Level ask -ProjectName "setup-test" -WorkspacePath (Get-Location).Path
 ```
 
-让用户在手机飞书回个 "ok" → 看到 `REPLY_TEXT: ok` = 端到端通了。
+**⚠️ 重要：bridge-core 收到一个新 `project_name` 时会自动创建一个同名飞书群（拉用户 + bot 进群），不会发到 4.4 配的单聊。**
+`targetChatId` 的单聊只是"种子人"，用来知道把谁拉进新群。
+
+引导用户：
+1. 等 5 秒看手机飞书 —— 会有个新群「setup-test」弹出（不是单聊！）
+2. 在那个新群里回个 "ok"
+3. 终端看到 `REPLY_TEXT: ok` = 端到端通了 ✅
 
 ---
 

@@ -1,4 +1,4 @@
-# 自动打开飞书 App 权限申请页（一键勾选 6 个必需权限）
+﻿# 自动打开飞书 App 权限申请页（一键勾选 6 个必需权限）
 # 用法：pwsh -File scripts/open-feishu-scopes.ps1 -AppId cli_xxxxxxxxxxxxxxxx
 [CmdletBinding()]
 param(

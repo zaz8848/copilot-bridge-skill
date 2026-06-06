@@ -1,67 +1,66 @@
-﻿# 一键注册 / 卸载 Windows 计划任务：开机自动起 bridge-core
-#
-# 用法（无需管理员）：
-#   .\scripts\install-bridge-autostart.ps1            # 安装
-#   .\scripts\install-bridge-autostart.ps1 -Uninstall # 卸载
-#
-# 装完后效果：
-#   - 用户登录 Windows 时自动运行 bridge-autostart.ps1
-#   - bridge-core 起来；如果已在跑就跳过，绝不重复起
-#   - 跑在当前用户身份下（能读 .env / bridge.db）
-#   - 看日志：D:\A_Code\Copilot Bridge\bridge-autostart.log + bridge-core.log
+﻿#requires -Version 5.1
+<#
+.SYNOPSIS
+    注册 Windows 计划任务 CopilotBridgeCore（登录时自启 bridge-core）。
 
+.DESCRIPTION
+    通用版（v0.0.45+）—— 脚本路径自动推导，不再硬编码。
+
+.NOTES
+    不需要管理员权限（计划任务以当前用户身份注册）。
+#>
 [CmdletBinding()]
 param(
-    [switch]$Uninstall
+    [string]$TaskName = 'CopilotBridgeCore'
 )
 
-$taskName = "CopilotBridgeCore"
-$scriptPath = "D:\A_Code\Copilot Bridge PowerShell\scripts\bridge-autostart.ps1"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
-if ($Uninstall) {
-    Write-Host "卸载计划任务 $taskName ..." -ForegroundColor Yellow
-    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-    Write-Host "已卸载" -ForegroundColor Green
-    exit 0
-}
+# 自启脚本路径 = 本脚本同目录下 bridge-autostart.ps1
+$autostartScript = Join-Path $PSScriptRoot 'bridge-autostart.ps1'
 
-if (-not (Test-Path $scriptPath)) {
-    Write-Host "FATAL: 找不到 $scriptPath" -ForegroundColor Red
+if (-not (Test-Path $autostartScript)) {
+    Write-Host "[FATAL] $autostartScript not found" -ForegroundColor Red
     exit 1
 }
 
-# 已存在就先删
-Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+Write-Host "[install-bridge-autostart] registering task '$TaskName'" -ForegroundColor Yellow
+Write-Host "  script: $autostartScript"
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`""
+# 删旧任务（不报错）
+Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+# 注册
+$action = New-ScheduledTaskAction `
+    -Execute 'powershell.exe' `
+    -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$autostartScript`""
+
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+
+$principal = New-ScheduledTaskPrincipal `
+    -UserId $env:USERNAME `
+    -LogonType Interactive `
+    -RunLevel Limited
 
 $settings = New-ScheduledTaskSettingsSet `
     -AllowStartIfOnBatteries `
     -DontStopIfGoingOnBatteries `
-    -ExecutionTimeLimit ([TimeSpan]::Zero) `
+    -StartWhenAvailable `
+    -ExecutionTimeLimit (New-TimeSpan -Days 0) `
     -RestartCount 3 `
     -RestartInterval (New-TimeSpan -Minutes 1)
 
-$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
-
-Register-ScheduledTask -TaskName $taskName `
+Register-ScheduledTask `
+    -TaskName $TaskName `
     -Action $action `
     -Trigger $trigger `
-    -Settings $settings `
     -Principal $principal `
-    -Description "Auto-start Copilot Bridge core (Node.js) at user logon" | Out-Null
+    -Settings $settings `
+    -Description "Auto-start copilot-bridge-skill bridge-core on user logon" | Out-Null
 
-Write-Host "" -ForegroundColor White
-Write-Host "✅ 计划任务已注册：$taskName" -ForegroundColor Green
-Write-Host "" -ForegroundColor White
-Write-Host "  触发：当前用户登录时" -ForegroundColor White
-Write-Host "  执行：$scriptPath" -ForegroundColor White
-Write-Host "  自重启：失败时 1 分钟内重试，最多 3 次" -ForegroundColor White
-Write-Host "" -ForegroundColor White
-Write-Host "  立即测一次：" -ForegroundColor Yellow
-Write-Host "    Start-ScheduledTask -TaskName CopilotBridgeCore" -ForegroundColor Yellow
-Write-Host "" -ForegroundColor White
-Write-Host "  看任务历史：任务计划程序 → 任务计划程序库 → $taskName" -ForegroundColor White
+Write-Host "[install-bridge-autostart] OK. Task registered." -ForegroundColor Green
+Write-Host ""
+Write-Host "Verify: Get-ScheduledTask -TaskName $TaskName"
+Write-Host "Test now: Start-ScheduledTask -TaskName $TaskName"
+Write-Host "Unregister: Unregister-ScheduledTask -TaskName $TaskName -Confirm:`$false"

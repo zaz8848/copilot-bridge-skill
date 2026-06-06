@@ -1,4 +1,4 @@
-# feishu-send-and-wait.ps1
+﻿# feishu-send-and-wait.ps1
 # 发飞书卡片 + 短挂续杯轮询等用户回复。结果打到 stdout 让 AI 通过 get_terminal_output 读。
 #
 # 用法（典型 async 调用）：
@@ -31,6 +31,8 @@ param(
     [string]$ResumeTaskId = ""   # 已有 task_id 时跳过发卡，直接接力 wait
 )
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
 
 function Invoke-JsonPost {

@@ -1,4 +1,4 @@
-# feishu-health.ps1
+﻿# feishu-health.ps1
 # 检查 bridge-core 是否存活。
 #
 # 用法：
@@ -12,6 +12,8 @@ param(
     [int]$TimeoutSec = 5
 )
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
 
 try {

@@ -29,16 +29,27 @@
 
 > 全程 AI 引导你装。你只要点鼠标 + 在飞书后台抄几个值贴回来。
 
+### Step 0：一次性放开 PowerShell 脚本执行（仅当前用户）
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+```
+
+> 不做这一步，下面的 `pnpm` / `npm` / `install.ps1` 全部会因为默认 ExecutionPolicy=Restricted 报「无法加载文件…在此系统上禁止运行脚本」。
+
 ### Step 1：把仓库 clone 到任意位置
 
 ```powershell
-git clone https://github.com/<owner>/copilot-bridge-skill.git
+git clone https://github.com/zaz8848/copilot-bridge-skill.git
 cd copilot-bridge-skill
 ```
 
 ### Step 2：跑安装器
 
 ```powershell
+# 推荐用 PowerShell 7+（pwsh）。如果只有 PowerShell 5.1（Windows 默认）：
+powershell.exe -ExecutionPolicy Bypass -File install.ps1
+# PowerShell 7+：
 pwsh -File install.ps1
 ```
 
@@ -56,7 +67,7 @@ pwsh -File install.ps1
 ```
 
 AI 会自动读取 `SETUP.skill.md` 一步一步引导你：
-- 装 Node.js 20+ / pnpm / cloudflared
+- 装 Node.js 22 LTS（**必须 22.x**，better-sqlite3 v12 的 prebuild 矩阵覆盖 Node 22/24，不覆盖 Node 20，否则强制源码编译要 MSVC + Python） / pnpm / cloudflared
 - 引导你去飞书后台创建自建应用（自动弹浏览器）
 - 收你飞书 App 凭据，写到 `.env` / `copilot-bridge.config.json`
 - 装 cloudflared 隧道、注册 Windows 服务
@@ -85,7 +96,7 @@ Copilot 下次开会话自动激活 `copilot-bridge` skill，开始走飞书通�
 | 必备 | 难度 | 一次配置 vs 每电脑 |
 |---|---|---|
 | Windows 10/11 | - | - |
-| Node.js 20+ | 低 | install.ps1 帮你装 |
+| Node.js 22 LTS | 低 | install.ps1 帮你装（v22 是 better-sqlite3 v12 prebuild 覆盖的最佳版本） |
 | 一个免费飞书账号 | 低 | 一次性 |
 | 飞书自建应用（App ID/Secret） | 中 | 5 分钟拿，AI 引导 |
 | 公网入口（cloudflared，免费够用） | 中 | install.ps1 帮你装 |
@@ -190,6 +201,39 @@ pwsh -File scripts/doctor.ps1
 - `nextStep` → 当前缺什么（`install-node` / `pnpm-build` / `start-bridge` / ...）
 
 日常运维：[docs/OPERATIONS.md](docs/OPERATIONS.md)
+
+---
+
+## 换电脑迁移（旧机 → 新机）
+
+**一个 cloudflared 隧道同一时刻只能由一台机器服务**。两台机同时连同一个 tunnel 会被 Cloudflare 负载均衡，50% 飞书回调会落到旧机，新机收不到。
+
+### 旧机：先关 cloudflared
+```powershell
+# 管理员 PowerShell
+Stop-Service Cloudflared
+Set-Service Cloudflared -StartupType Manual   # 或 Disabled
+```
+
+### 要搬到新机的 4 个文件（其它都能 git clone 或重装）
+| 旧机路径 | 新机放到 | 作用 |
+|---|---|---|
+| `<仓库>/copilot-bridge.config.json` | 同 | 飞书凭据 + 隧道域名 |
+| `C:\ProgramData\Cloudflared\cert.pem` | 同 | Cloudflare 账号 token |
+| `C:\ProgramData\Cloudflared\<UUID>.json` | 同 | 隧道密钥 |
+| `C:\ProgramData\Cloudflared\config.yml` | 同 | ingress 白名单 |
+
+**搬运渠道**：U 盘 / 微信文件传输助手 / 加密 zip。**禁公网明文传输**。
+
+### 新机：跑 SETUP，AI 自动识别已配
+```powershell
+git clone https://github.com/zaz8848/copilot-bridge-skill.git
+cd copilot-bridge-skill
+# 把上面 4 个文件粘到对应位置
+powershell.exe -ExecutionPolicy Bypass -File install.ps1
+# 在 VS Code Copilot Chat 说："帮我装一下 copilot-bridge"
+# AI 跑 doctor.ps1 检测到配置已就位，自动跳过引导直奔 pnpm install + build + cloudflared service install
+```
 
 ---
 

@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # scripts/doctor.ps1
 #
 # 自检 copilot-bridge 当前环境状态，输出 **严格 JSON** 到 stdout。
@@ -14,6 +14,8 @@
 [CmdletBinding()]
 param()
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
@@ -27,7 +29,8 @@ function Get-CmdVersion {
     try {
         $out = & $Name $Args.Split(' ') 2>&1 | Out-String
         return ($out -split "`n")[0].Trim()
-    } catch {
+    }
+    catch {
         return $null
     }
 }
@@ -70,14 +73,15 @@ if ($cf.installed) {
             status    = $svc.Status.ToString()
             startType = $svc.StartType.ToString()
         }
-    } else {
+    }
+    else {
         $cf.service = @{ exists = $false }
     }
 }
 
 # ---------------- 配置文件 ----------------
 $configPath = Join-Path $repoRoot 'copilot-bridge.config.json'
-$envPath    = Join-Path $repoRoot '.env'
+$envPath = Join-Path $repoRoot '.env'
 $configFile = @{
     exists       = Test-Path $configPath
     envExists    = Test-Path $envPath
@@ -93,7 +97,8 @@ if ($configFile.exists) {
         $appSecretRaw = $cfg.feishu.appSecret
         $appSecretResolved = if ($appSecretRaw -match '^\$\{env:([A-Z0-9_]+)\}$') {
             [System.Environment]::GetEnvironmentVariable($Matches[1])
-        } else {
+        }
+        else {
             $appSecretRaw
         }
         # 也从 .env 兜底
@@ -109,7 +114,8 @@ if ($configFile.exists) {
         )
         $configFile.mode = $cfg.publicEndpoint.mode
         $configFile.chatIdFilled = ($cfg.feishu.targetChatId -and -not $cfg.feishu.targetChatId.StartsWith('oc_xxx'))
-    } catch {
+    }
+    catch {
         $configFile.parseError = $_.Exception.Message
     }
 }
@@ -129,15 +135,16 @@ try {
         $bridgeCore.running = $true
         $bridgeCore.version = ($health.Content | ConvertFrom-Json).version
     }
-} catch {
+}
+catch {
     # 没起来很正常
 }
 
 # ---------------- skill 全局安装 ----------------
 $promptsDir = Join-Path $env:APPDATA 'Code\User\prompts\skills\copilot-bridge'
 $skill = @{
-    promptsDir         = $promptsDir
-    skillInstalled     = Test-Path (Join-Path $promptsDir 'SKILL.md')
+    promptsDir          = $promptsDir
+    skillInstalled      = Test-Path (Join-Path $promptsDir 'SKILL.md')
     setupSkillInstalled = Test-Path (Join-Path $promptsDir 'SETUP.skill.md')
 }
 
@@ -161,15 +168,15 @@ $result = @{
     bridgeCore  = $bridgeCore
     skill       = $skill
     ready       = $ready
-    nextStep    = if (-not $node.ok)                  { 'install-node' }
-                   elseif (-not $cf.installed)         { 'install-cloudflared' }
-                   elseif (-not $configFile.exists)    { 'create-config' }
-                   elseif (-not $configFile.feishuFilled) { 'fill-feishu-credentials' }
-                   elseif (-not $bridgeCore.nodeModules)  { 'pnpm-install' }
-                   elseif (-not $bridgeCore.built)        { 'pnpm-build' }
-                   elseif (-not $bridgeCore.running)      { 'start-bridge' }
-                   elseif (-not $skill.skillInstalled)    { 'install-skill' }
-                   else                                   { 'done' }
+    nextStep    = if (-not $node.ok) { 'install-node' }
+    elseif (-not $cf.installed) { 'install-cloudflared' }
+    elseif (-not $configFile.exists) { 'create-config' }
+    elseif (-not $configFile.feishuFilled) { 'fill-feishu-credentials' }
+    elseif (-not $bridgeCore.nodeModules) { 'pnpm-install' }
+    elseif (-not $bridgeCore.built) { 'pnpm-build' }
+    elseif (-not $bridgeCore.running) { 'start-bridge' }
+    elseif (-not $skill.skillInstalled) { 'install-skill' }
+    else { 'done' }
 }
 
 $result | ConvertTo-Json -Depth 6

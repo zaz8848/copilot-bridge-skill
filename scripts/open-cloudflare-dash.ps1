@@ -1,4 +1,4 @@
-# 自动打开 Cloudflare Dashboard
+﻿# 自动打开 Cloudflare Dashboard
 # 用法：pwsh -File scripts/open-cloudflare-dash.ps1
 Start-Process 'https://dash.cloudflare.com/'
 Write-Host '[open-cloudflare-dash] 已弹出浏览器：Cloudflare Dashboard' -ForegroundColor Green

@@ -1,4 +1,4 @@
-# 半自动设置飞书 webhook URL：复制 URL 到剪贴板 + 打开飞书后台
+﻿# 半自动设置飞书 webhook URL：复制 URL 到剪贴板 + 打开飞书后台
 # 用法：pwsh -File scripts/set-feishu-webhook-url.ps1 -AppId cli_xxx -PublicUrl https://xxx.trycloudflare.com
 [CmdletBinding()]
 param(

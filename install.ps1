@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # install.ps1 — copilot-bridge-skill 用户入口
 #
 # 用户唯一要做的事：在仓库根目录右键 → "用 PowerShell 运行"，或：
@@ -22,6 +22,8 @@ param(
     [string]$Mode = 'All'
 )
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
 $repoRoot = $PSScriptRoot
 $promptsRoot = Join-Path $env:APPDATA 'Code\User\prompts\skills\copilot-bridge'

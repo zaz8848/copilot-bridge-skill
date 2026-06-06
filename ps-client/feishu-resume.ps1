@@ -1,4 +1,4 @@
-# feishu-resume.ps1
+﻿# feishu-resume.ps1
 # 拉取当前项目的离线收件箱（AI 离线期间用户在飞书发来的消息）。
 #
 # 用法：
@@ -12,6 +12,8 @@ param(
     [string]$BridgeUrl = "http://127.0.0.1:3000"
 )
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
 
 $payload = @{ project_name = $ProjectName } | ConvertTo-Json -Compress
