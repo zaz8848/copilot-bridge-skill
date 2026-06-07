@@ -344,6 +344,29 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
   .companion-mini .badge.unread { background: #d99e3e; color: var(--ink); }
   .companion-mini .badge.live { background: var(--terra); color: var(--paper); animation: pulse-soft 1.6s ease-in-out infinite; }
 
+  /* ─── 细滾动条（drawer / composer / 任意滚动区） ─── */
+  .drawer-scroll::-webkit-scrollbar,
+  .composer textarea::-webkit-scrollbar {
+    width: 8px;
+  }
+  .drawer-scroll::-webkit-scrollbar-track,
+  .composer textarea::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .drawer-scroll::-webkit-scrollbar-thumb,
+  .composer textarea::-webkit-scrollbar-thumb {
+    background: rgba(31, 26, 20, 0.18);
+    border-radius: 4px;
+  }
+  .drawer-scroll::-webkit-scrollbar-thumb:hover,
+  .composer textarea::-webkit-scrollbar-thumb:hover {
+    background: rgba(31, 26, 20, 0.32);
+  }
+  .drawer-scroll, .composer textarea {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(31, 26, 20, 0.22) transparent;
+  }
+
   /* Drawer inbox 区 */
   .inbox-banner {
     margin: 0 32px 18px; padding: 14px 18px;
@@ -444,11 +467,11 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
   }
   .composer .target.has-task { color: var(--terra); }
   .composer textarea {
-    flex: 1 1 auto; min-height: 40px; max-height: 180px;
+    flex: 1 1 auto; min-height: 40px; max-height: 360px;
     background: var(--ivory-light); color: var(--ink);
     border: 1px solid var(--rule);
     padding: 10px 12px; font-family: var(--serif); font-size: 14px;
-    line-height: 1.5; outline: none; resize: none;
+    line-height: 1.5; outline: none; resize: vertical;
     transition: border-color 0.15s;
   }
   .composer textarea:focus { border-color: var(--terra); }
@@ -1330,8 +1353,27 @@ async function sendComposerReply() {
 
 function autoResizeComposer() {
   const ta = document.getElementById('composer-text');
+  // 只在用户没手动拖过（保证用户拖大之后不会被 autoResize 踩回去）才自动调高
+  if (ta.dataset.manualResized === '1') return;
   ta.style.height = 'auto';
-  ta.style.height = Math.min(ta.scrollHeight, 180) + 'px';
+  ta.style.height = Math.min(ta.scrollHeight, 360) + 'px';
+}
+
+// 检测手动拖拽：一旦用户拖了右下角手柄，锁住手动高度不再被自动调整
+function watchComposerManualResize() {
+  const ta = document.getElementById('composer-text');
+  if (!ta || ta.dataset.resizeObserverAttached === '1') return;
+  ta.dataset.resizeObserverAttached = '1';
+  let lastH = ta.offsetHeight;
+  new ResizeObserver(() => {
+    const h = ta.offsetHeight;
+    if (Math.abs(h - lastH) > 2 && document.activeElement !== ta) {
+      // 仅在未 focus 时的外部变化忽略；focus 下的变化是用户拖
+    } else if (Math.abs(h - lastH) > 2) {
+      ta.dataset.manualResized = '1';
+    }
+    lastH = h;
+  }).observe(ta);
 }
 
 async function loadMoreHistory() {
@@ -1368,6 +1410,7 @@ function closeDrawer() {
   const ta = document.getElementById('composer-text');
   ta.value = '';
   ta.dataset.taskId = '';
+  ta.dataset.manualResized = '';
   ta.disabled = true;
   ta.style.height = '';
   document.getElementById('composer-send').disabled = true;
@@ -1416,7 +1459,7 @@ function renderHistory(project, tasks) {
       replyBubble +
     '</div>';
   }).join('');
-  setTimeout(() => { const d = document.getElementById('drawer'); d.scrollTop = d.scrollHeight; }, 50);
+  setTimeout(() => { const d = document.getElementById('drawer-scroll'); if (d) d.scrollTop = d.scrollHeight; }, 50);
 }
 
 async function refresh() {
@@ -1509,6 +1552,7 @@ composerTextEl.addEventListener('keydown', (e) => {
     if (!document.getElementById('composer-send').disabled) sendComposerReply();
   }
 });
+watchComposerManualResize();
 
 let timer = null;
 function setupAutoRefresh() {
