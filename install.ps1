@@ -97,8 +97,57 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($jsonDst, $json, $utf8NoBom)
 Write-Host "  ✅ feishu-stop-guard.json -> $jsonDst（绝对路径已写死）" -ForegroundColor Green
 
+# 2c. 关键：把 ~/.copilot/hooks 加到 VS Code chat.hookFilesLocations
+# VS Code 文档列了这个路径，但 default 不扫，不加 setting hook 完全不会被加载（暗坑）
+# 用文本注入而不是 JSON parse/serialize，避免：
+#   - PS 5.1 ConvertFrom-Json 没有 -AsHashtable
+#   - JSONC 注释 / trailing comma 解析失败
+#   - 反序列化丢失原始格式 + key 顺序
+$vscodeSettingsPaths = @(
+    (Join-Path $env:APPDATA 'Code\User\settings.json'),
+    (Join-Path $env:APPDATA 'Code - Insiders\User\settings.json')
+)
+foreach ($settingsPath in $vscodeSettingsPaths) {
+    $parent = Split-Path -Parent $settingsPath
+    if (-not (Test-Path $parent)) { continue }
+    $raw = if (Test-Path $settingsPath) { Get-Content $settingsPath -Raw -ErrorAction SilentlyContinue } else { $null }
+    if ($null -eq $raw -or $raw.Trim() -eq '') { $raw = "{`r`n}" }
+    # 已经设置过就跳过
+    if ($raw -match '"~/\.copilot/hooks"\s*:\s*true') {
+        Write-Host "  ✓ $settingsPath 已含 ~/.copilot/hooks" -ForegroundColor Gray
+        continue
+    }
+    # 备份
+    if (Test-Path $settingsPath) {
+        Copy-Item $settingsPath "$settingsPath.bak-$(Get-Date -Format 'yyyyMMddHHmmss')" -Force
+    }
+    $newContent = $null
+    if ($raw -match '"chat\.hookFilesLocations"\s*:\s*\{') {
+        # 已有 chat.hookFilesLocations 对象，往里加一行
+        $newContent = $raw -replace '("chat\.hookFilesLocations"\s*:\s*\{)', "`$1`r`n        `"~/.copilot/hooks`": true,"
+    }
+    else {
+        # 没有该 key，在最外层 `}` 前插入完整块
+        # 找最后一个 `}`，前面加逗号 + 新 key
+        $idx = $raw.LastIndexOf('}')
+        if ($idx -lt 0) {
+            Write-Host "  ⚠  $settingsPath 不是 JSON 对象，跳过" -ForegroundColor Yellow
+            continue
+        }
+        # 前面如果是 `{` 直接接，不加逗号；否则补逗号
+        $before = $raw.Substring(0, $idx).TrimEnd()
+        $needComma = $before -notmatch '[\{,]\s*$'
+        $comma = if ($needComma) { ',' } else { '' }
+        $newContent = $before + $comma + "`r`n    `"chat.hookFilesLocations`": {`r`n        `"~/.copilot/hooks`": true`r`n    }`r`n}"
+    }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($settingsPath, $newContent, $utf8NoBom)
+    Write-Host "  ✅ 加 chat.hookFilesLocations[~/.copilot/hooks]=true -> $settingsPath" -ForegroundColor Green
+}
+
 Write-Host '  Stop hook 只在 workspace `.github/copilot-instructions.md` 含 `comm_mode: feishu` 时生效。' -ForegroundColor Gray
 Write-Host '  其它 workspace 零影响。临时禁用：重命名 feishu-stop-guard.json 加 .disabled 后缀。' -ForegroundColor Gray
+Write-Host '  装完后需要 Reload VS Code Window 让新 hook 配置生效。' -ForegroundColor Gray
 Write-Host ''
 
 # ---------------- 3. 设置 COPILOT_BRIDGE_HOME 环境变量 ----------------
