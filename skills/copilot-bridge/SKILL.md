@@ -36,7 +36,7 @@ applyTo: '**'
 PS 脚本所在路径从环境变量读：
 
 ```powershell
-$env:COPILOT_BRIDGE_HOME  # 例如 D:\A_Code\copilot-bridge-skill
+$env:COPILOT_BRIDGE_HOME  # 例如 D:\A_Code\_DevTool\copilot-bridge-skill
 $psClient = "$env:COPILOT_BRIDGE_HOME\ps-client"
 ```
 
@@ -67,9 +67,12 @@ bridge 不在线 → 提示用户跑 `scripts/doctor.ps1` 看问题，或手动 
 ```powershell
 run_in_terminal(
   command: '& "$env:COPILOT_BRIDGE_HOME\ps-client\feishu-send-and-wait.ps1" -Message "改完了，请确认部署" -Level ask -ProjectName "<项目名>" -WorkspacePath "<workspace 绝对路径>"',
-  mode: "async"
+  mode: "async"          # ← 硬规则：必须 async / isBackground=true
 )
 ```
+
+> ⚠️ **MUST use `mode: "async"` (即 `isBackground: true`)**。
+> 用 `mode: "sync"` 会把 VS Code agent 阻塞在 long-poll 上几十分钟，期间你无法跟它交流、它无法用任何其它工具，等于死锁。Stop hook 会引擎层 block 任何最后一次 feishu 调用是 sync 的 turn，强制 AI 重新用 async 调。
 
 带图片：`-ImagePaths "D:\screenshots\1.png","D:\screenshots\2.png"`
 
