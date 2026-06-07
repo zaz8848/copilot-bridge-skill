@@ -373,21 +373,24 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
     font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--ink-mute);
   }
 
-  /* ─── Drawer (聊天回放) ─── */
+  /* ─── Drawer (聊天回放，居中模态风格) ─── */
   .drawer-mask {
     display: none; position: fixed; inset: 0; z-index: 90;
     background: rgba(31, 26, 20, 0.42); backdrop-filter: blur(6px);
   }
   .drawer-mask.open { display: block; animation: fade 0.25s ease-out; }
   .drawer {
-    display: none; position: fixed; top: 0; right: 0; bottom: 0; z-index: 95;
-    width: min(760px, 100vw); background: var(--ivory-light);
-    border-left: 1px solid var(--ink);
-    box-shadow: -24px 0 60px -20px rgba(31, 26, 20, 0.3);
+    display: none; position: fixed; inset: 0; margin: auto; z-index: 95;
+    width: min(880px, calc(100vw - 48px));
+    height: min(86vh, calc(100vh - 48px));
+    background: var(--ivory-light);
+    border: 1px solid var(--ink); border-radius: 10px;
+    box-shadow: 0 36px 90px -24px rgba(31, 26, 20, 0.45);
     overflow-y: auto;
-    transform: translateX(100%); transition: transform 0.32s cubic-bezier(0.2, 0.85, 0.3, 1);
+    transform: translateY(16px) scale(0.97); opacity: 0;
+    transition: transform 0.28s cubic-bezier(0.2, 0.85, 0.3, 1), opacity 0.22s ease-out;
   }
-  .drawer.open { display: block; transform: translateX(0); }
+  .drawer.open { display: block; transform: translateY(0) scale(1); opacity: 1; }
   .drawer-head {
     padding: 28px 32px 20px; border-bottom: 1px solid var(--rule);
     background: var(--ivory-light); position: sticky; top: 0; z-index: 2;
@@ -424,6 +427,15 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
   .drawer-head .actions button:hover { border-color: var(--ink); color: var(--ink); }
   .drawer-head .actions button.danger:hover { border-color: var(--terra); color: var(--terra); background: #fdf6f0; }
   .drawer-body { padding: 24px 32px 60px; }
+
+  .load-more-row { text-align: center; margin: 4px 0 22px; }
+  .load-more-btn {
+    background: transparent; border: 1px solid var(--rule);
+    padding: 7px 18px; font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer;
+    color: var(--ink-soft); transition: all 0.15s;
+  }
+  .load-more-btn:hover { border-color: var(--ink); color: var(--ink); background: var(--paper); }
 
   .turn { margin-bottom: 24px; animation: rise-slow 0.4s ease-out both; }
   .turn .turn-meta {
@@ -588,7 +600,7 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
     .hero h1 { font-size: 44px; }
     .hero .signal { text-align: left; }
     .featured-grid, .residents-grid { grid-template-columns: 1fr; }
-    .drawer { width: 100vw; }
+    .drawer { width: calc(100vw - 16px); height: calc(100vh - 16px); border-radius: 6px; }
   }
 </style>
 </head>
@@ -668,7 +680,7 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
 <div class="toast" id="toast"></div>
 
 <script>
-const state = { agents: [], filter: '', sortBy: 'active', currentProject: null, preview: new Map() };
+const state = { agents: [], filter: '', sortBy: 'active', currentProject: null, currentLimit: 20, preview: new Map() };
 
 // ── Avatar generator ─────────────────────────────────────
 // 给每个 project 生成确定性的几何 mascot 头像
@@ -1189,26 +1201,46 @@ function renderResidents() {
 }
 
 // ── Drawer ───────────────────────────────────────────────
+const HISTORY_INITIAL_LIMIT = 20;
+const HISTORY_PAGE_STEP = 30;
+
 async function openDrawer(encodedName) {
   const project = decodeURIComponent(encodedName);
   state.currentProject = project;
+  state.currentLimit = HISTORY_INITIAL_LIMIT;
   document.getElementById('drawer-avatar').innerHTML = avatarSVG(project, 64);
   document.getElementById('drawer-title').textContent = project;
   document.getElementById('drawer-stats').innerHTML = '';
   document.getElementById('drawer-inbox').innerHTML = '';
-  document.getElementById('drawer-body').innerHTML = '<div class="empty">Loading conversation&hellip;</div>';
+  document.getElementById('drawer-body').innerHTML =
+    '<div class="empty">Loading conversation&hellip;</div>';
   document.getElementById('drawer-mask').classList.add('open');
   document.getElementById('drawer').classList.add('open');
+  // reset fingerprint to force first render after limit change
+  document.getElementById('drawer-body').dataset.fp = '';
 
   try {
     const [historyR, inboxR] = await Promise.all([
-      fetchJSON('/api/dashboard/agent/' + encodeURIComponent(project) + '/history?limit=80'),
+      fetchJSON('/api/dashboard/agent/' + encodeURIComponent(project) + '/history?limit=' + state.currentLimit),
       fetchJSON('/api/dashboard/agent/' + encodeURIComponent(project) + '/inbox'),
     ]);
     renderInbox(project, inboxR.replies);
     renderHistory(project, historyR.tasks);
   } catch (e) {
     document.getElementById('drawer-body').innerHTML = '<div class="empty">Failed to load: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function loadMoreHistory() {
+  if (!state.currentProject) return;
+  state.currentLimit += HISTORY_PAGE_STEP;
+  try {
+    const r = await fetchJSON('/api/dashboard/agent/' + encodeURIComponent(state.currentProject) + '/history?limit=' + state.currentLimit);
+    // force re-render
+    document.getElementById('drawer-body').dataset.fp = '';
+    renderHistory(state.currentProject, r.tasks);
+  } catch (e) {
+    showToast('Load more failed: ' + e.message);
   }
 }
 
@@ -1250,7 +1282,12 @@ function renderHistory(project, tasks) {
   const fp = ordered.map(t => t.task_id + ':' + t.status + ':' + (t.reply_at || 0)).join('|');
   if (body.dataset.fp === fp) return;
   body.dataset.fp = fp;
-  body.innerHTML = ordered.map(t => {
+  // 顶部：如果返回条数 == 当前 limit，说明可能还有更早的 → 显示加载按钮
+  const hasMore = tasks.length >= (state.currentLimit || HISTORY_INITIAL_LIMIT);
+  const loadMoreBtn = hasMore
+    ? '<div class="load-more-row"><button class="load-more-btn" onclick="loadMoreHistory()">加载更早的 ' + HISTORY_PAGE_STEP + ' 条</button></div>'
+    : '';
+  body.innerHTML = loadMoreBtn + ordered.map(t => {
     const replyBubble = t.reply_text
       ? '<div class="bubble user"><div class="who">You · ' + fmtTime(t.reply_at) + ' · ' + fmtDuration(t.created_at, t.reply_at) + '</div><div class="md">' + renderMarkdown(t.reply_text) + '</div></div>'
       : (t.status === 'pending'
@@ -1276,8 +1313,9 @@ async function refresh() {
     document.getElementById('lastUpdate').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB');
     if (state.currentProject) {
       state.preview.clear();
+      const lim = state.currentLimit || HISTORY_INITIAL_LIMIT;
       const [historyR, inboxR] = await Promise.all([
-        fetchJSON('/api/dashboard/agent/' + encodeURIComponent(state.currentProject) + '/history?limit=80'),
+        fetchJSON('/api/dashboard/agent/' + encodeURIComponent(state.currentProject) + '/history?limit=' + lim),
         fetchJSON('/api/dashboard/agent/' + encodeURIComponent(state.currentProject) + '/inbox'),
       ]);
       renderInbox(state.currentProject, inboxR.replies);
