@@ -296,22 +296,32 @@ mode=B 的话：URL 就是 `https://<你的 domain>`，cloudflared service 已�
 
 注册 Windows 计划任务 `CopilotBridgeCore`，登录时自启。
 
-### 7.2 装全局 SKILL.md（user-level skill）
+### 7.2 装全局 skill + Stop hook
 
 ```powershell
 .\install.ps1 -Mode SkillOnly
 ```
 
+`install.ps1` 干 3 件事：
+1. 拷 2 个 skill 到 `$HOME\.copilot\skills\<name>\SKILL.md`
+2. 拷 Stop hook 到 `$HOME\.copilot\hooks\feishu-stop-guard.{json,ps1}`
+3. 设 `COPILOT_BRIDGE_HOME` 环境变量
+
+**Stop hook 的作用**：comm_mode=feishu 的 workspace 里，AI 本轮要结束但没调过 `feishu-send-and-wait.ps1` → VS Code 强制 block 让 AI 必须先发飞书再结束。AI 自觉与否无关，引擎层兜底。详见 [hooks/feishu-stop-guard.ps1](../../hooks/feishu-stop-guard.ps1)。
+
 **目标路径（官方 personal skills 位置，VS Code 文档钦定）**：
 - `copilot-bridge` 主 skill → `$HOME\.copilot\skills\copilot-bridge\SKILL.md`
 - `copilot-bridge-setup` 安装 skill → `$HOME\.copilot\skills\copilot-bridge-setup\SKILL.md`
+- Stop hook → `$HOME\.copilot\hooks\feishu-stop-guard.{json,ps1}`
 
 > ⚠️ **坑（必读，下一个用户不要再踩）**：
 > - 不是 `%APPDATA%\Code\User\prompts\skills\...` —— 那是 prompts 目录，VS Code 不当 skill 加载，扔进去等于死文件
 > - 每个 skill **必须**独立目录 + 文件名必须叫 `SKILL.md`；不能多个 skill 塞同一目录、也不能叫 `SETUP.skill.md` 之类
 > - YAML frontmatter 的 `name` 字段必须跟父目录名完全一致（`copilot-bridge` 目录 → `name: copilot-bridge`）
 > - 官方 personal skills 还认 `~/.claude/skills/` 和 `~/.agents/skills/`，但我们统一用 `~/.copilot/skills/`
+> - hook 脚本必须用无 BOM UTF-8 但**纯 ASCII 内容**（PS 5.1 控制台默认 GBK 读 UTF-8 中文会乱码导致语法错；reason 字段允许中文是 string literal 不影响）
 > - 装完让用户在命令面板跑 `Developer: Reload Window`，然后在 Chat 输入 `/` 应能看到 `copilot-bridge` 和 `copilot-bridge-setup` 两条；看不到 = 路径错或文件名错
+> - 验证 hook：Output 面板 → 频道选 `GitHub Copilot Chat Hooks`，每次 AI 结束本轮应有日志
 
 **install.ps1 应当做的事**（如果还没实现，按这个逻辑写）：
 ```powershell

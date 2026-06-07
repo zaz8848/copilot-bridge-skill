@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.copilot\\hooks\\feishu-stop-guard.ps1\"",
+        "timeout": 10
+      }
+    ]
+  }
+}

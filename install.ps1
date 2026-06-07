@@ -29,9 +29,11 @@ param(
 $OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
 $repoRoot = $PSScriptRoot
-# 官方 personal skills 路径（VS Code 文档钦定）
+# 官方 personal skills / hooks 路径（VS Code 文档钦定）
 # 参考：https://code.visualstudio.com/docs/agent-customization/agent-skills
+#       https://code.visualstudio.com/docs/agent-customization/hooks
 $skillsRoot = Join-Path $HOME '.copilot\skills'
+$hooksRoot  = Join-Path $HOME '.copilot\hooks'
 
 Write-Host '============================================================' -ForegroundColor Cyan
 Write-Host '  copilot-bridge-skill 安装器' -ForegroundColor Cyan
@@ -40,7 +42,7 @@ Write-Host '============================================================' -Foreg
 Write-Host ''
 
 # ---------------- 1. 装 skill 文件到 ~/.copilot/skills/<name>/SKILL.md ----------------
-Write-Host "[1/3] 装 skill 到 $skillsRoot ..." -ForegroundColor Yellow
+Write-Host "[1/4] 装 skill 到 $skillsRoot ..." -ForegroundColor Yellow
 $skillNames = @('copilot-bridge', 'copilot-bridge-setup')
 foreach ($name in $skillNames) {
     $src = Join-Path $repoRoot "skills\$name\SKILL.md"
@@ -59,15 +61,35 @@ Write-Host '  装完后在 VS Code 命令面板跑 "Developer: Reload Window"，
 Write-Host '  然后 Chat 输入 "/" 应能看到 copilot-bridge 和 copilot-bridge-setup' -ForegroundColor Gray
 Write-Host ''
 
-# ---------------- 2. 设置 COPILOT_BRIDGE_HOME 环境变量 ----------------
-Write-Host "[2/3] 设置环境变量 COPILOT_BRIDGE_HOME = $repoRoot ..." -ForegroundColor Yellow
+# ---------------- 2. 装 Stop hook 到 ~/.copilot/hooks/ ----------------
+Write-Host "[2/4] 装 Stop hook 到 $hooksRoot ..." -ForegroundColor Yellow
+if (-not (Test-Path $hooksRoot)) {
+    New-Item -Path $hooksRoot -ItemType Directory -Force | Out-Null
+}
+$hookFiles = @('feishu-stop-guard.json', 'feishu-stop-guard.ps1')
+foreach ($f in $hookFiles) {
+    $src = Join-Path $repoRoot "hooks\$f"
+    $dst = Join-Path $hooksRoot $f
+    if (-not (Test-Path $src)) {
+        Write-Host "  ⚠  源文件不存在，跳过：$src" -ForegroundColor Yellow
+        continue
+    }
+    Copy-Item $src $dst -Force
+    Write-Host "  ✅ $f -> $dst" -ForegroundColor Green
+}
+Write-Host '  Stop hook 只在 workspace `.github/copilot-instructions.md` 含 `comm_mode: feishu` 时生效。' -ForegroundColor Gray
+Write-Host '  其它 workspace 零影响。临时禁用：重命名 feishu-stop-guard.json 加 .disabled 后缀。' -ForegroundColor Gray
+Write-Host ''
+
+# ---------------- 3. 设置 COPILOT_BRIDGE_HOME 环境变量 ----------------
+Write-Host "[3/4] 设置环境变量 COPILOT_BRIDGE_HOME = $repoRoot ..." -ForegroundColor Yellow
 [Environment]::SetEnvironmentVariable('COPILOT_BRIDGE_HOME', $repoRoot, 'User')
 $env:COPILOT_BRIDGE_HOME = $repoRoot
 Write-Host '  ✅ 环境变量已设置（新开终端 / 重启 VS Code 后生效）' -ForegroundColor Green
 Write-Host ''
 
-# ---------------- 3. 提示下一步 ----------------
-Write-Host '[3/3] 下一步该干什么 ...' -ForegroundColor Yellow
+# ---------------- 4. 提示下一步 ----------------
+Write-Host '[4/4] 下一步该干什么 ...' -ForegroundColor Yellow
 
 $configExists = Test-Path (Join-Path $repoRoot 'copilot-bridge.config.json')
 
