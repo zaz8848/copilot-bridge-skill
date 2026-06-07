@@ -57,10 +57,14 @@ pwsh -File install.ps1
 1. 把两个 skill 拷到 VS Code 官方 personal skills 路径：
    - `~/.copilot/skills/copilot-bridge/SKILL.md`
    - `~/.copilot/skills/copilot-bridge-setup/SKILL.md`
-2. 设置环境变量 `COPILOT_BRIDGE_HOME` 指向当前仓库
-3. 提示你下一步
+2. 装 **Stop hook** 到 `~/.copilot/hooks/feishu-stop-guard.{json,ps1}`。hook 会在 AI 忘记发飞书就想结束本轮时强制让它再来一轮（引擎层兑底，跟 AI 自觉无关）。**只在项目 `comm_mode: feishu` 时生效，其它项目零影响**
+3. 自动往 `%APPDATA%\Code\User\settings.json` 加 `"chat.hookFilesLocations": { "~/.copilot/hooks": true }`（VS Code default 不扫这个路径，不加这行 hook 不会被加载）
+4. 设置环境变量 `COPILOT_BRIDGE_HOME` 指向当前仓库
+5. 提示你下一步
 
-> 装完在 VS Code 命令面板跑 `Developer: Reload Window`，然后 Chat 输入 `/` 应能看到 `copilot-bridge` 和 `copilot-bridge-setup` 两条。
+> 装完在 VS Code 命令面板跑 `Developer: Reload Window`，然后：
+> - Chat 输入 `/` 应能看到 `copilot-bridge` 和 `copilot-bridge-setup` 两条
+> - Output 面板 → 频道选 `GitHub Copilot Chat Hooks`，下次 AI 结束本轮时能看到 Stop hook 跳动
 
 ### Step 3：在 VS Code 里让 AI 帮你装
 
@@ -135,6 +139,9 @@ copilot-bridge-skill/
 ├── skills/
 │   ├── copilot-bridge/SKILL.md            ← AI 运行规则（装到 ~/.copilot/skills/）
 │   └── copilot-bridge-setup/SKILL.md      ← AI 安装剧本（装到 ~/.copilot/skills/）
+├── hooks/
+│   ├── feishu-stop-guard.json             ← Stop hook 模板（install 时写入本机绝对路径后装到 ~/.copilot/hooks/）
+│   └── feishu-stop-guard.ps1              ← 判定脚本（3 层放行：非 feishu 项目 / 已发飞书 / 防死循环）
 ├── copilot-bridge.config.example.json     ← 配置模板（带字段注释）
 ├── .env.example                           ← secret 模板
 ├── .gitignore                             ← 排除 .env / bridge.db / config.json
@@ -159,6 +166,7 @@ copilot-bridge-skill/
 │   ├── install-cloudflared-service.ps1
 │   ├── install-bridge-autostart.ps1
 │   ├── bridge-autostart.ps1
+│   ├── bridge-autostart-hidden.vbs        ← VBS 包装，让计划任务的 PowerShell 启动无窗口
 │   └── start.ps1
 │
 ├── templates/

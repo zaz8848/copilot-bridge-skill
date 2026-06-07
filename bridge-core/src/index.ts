@@ -16,7 +16,7 @@ app.use(express.json({ limit: "1mb" }));
 
 // ---- 健康检�?----
 app.get("/health", (_req, res) => {
-    res.json({ ok: true, version: "0.0.46", time: new Date().toISOString() });
+    res.json({ ok: true, version: "0.0.47", time: new Date().toISOString() });
 });
 
 // 本地 console 兜底通信

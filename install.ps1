@@ -5,13 +5,17 @@
 #   powershell -ExecutionPolicy Bypass -File install.ps1
 #   （PowerShell 5.1 上 Windows 默认装；PS 7+ 用 `pwsh -File install.ps1` 也行）
 #
-# 做两件事：
+# 做 4 件事：
 #   1. 把两个 skill 拷到官方 personal skills 路径：
 #        ~/.copilot/skills/copilot-bridge/SKILL.md
 #        ~/.copilot/skills/copilot-bridge-setup/SKILL.md
 #      （以后任意 workspace 的 Copilot 都能自动发现）
-#   2. 设置 COPILOT_BRIDGE_HOME 环境变量指向本仓库根
-#   3. 提示用户去 VS Code Copilot Chat 说一句"帮我装一下 copilot-bridge"
+#   2. 把 Stop hook 拷到 ~/.copilot/hooks/feishu-stop-guard.{json,ps1}
+#      并自动往 %APPDATA%\Code\User\settings.json 注入
+#      "chat.hookFilesLocations": { "~/.copilot/hooks": true }
+#      （VS Code default 不扫这个路径，不加 setting hook 完全不会被加载）
+#   3. 设置 COPILOT_BRIDGE_HOME 环境变量指向本仓库根
+#   4. 提示用户去 VS Code Copilot Chat 说一句"帮我装一下 copilot-bridge"
 #      → AI 自动读 copilot-bridge-setup skill 开始引导
 #
 # 参数：
