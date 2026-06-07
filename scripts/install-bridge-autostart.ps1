@@ -19,22 +19,30 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 # 自启脚本路径 = 本脚本同目录下 bridge-autostart.ps1
 $autostartScript = Join-Path $PSScriptRoot 'bridge-autostart.ps1'
+# 隐藏窗口 VBS 包装：用 wscript 调 powershell 才能彻底无窗口
+# （直接 powershell -WindowStyle Hidden 在 LogonTrigger 下会先闪一个 conhost，关掉 = 杀进程）
+$hiddenLauncher = Join-Path $PSScriptRoot 'bridge-autostart-hidden.vbs'
 
 if (-not (Test-Path $autostartScript)) {
     Write-Host "[FATAL] $autostartScript not found" -ForegroundColor Red
     exit 1
 }
+if (-not (Test-Path $hiddenLauncher)) {
+    Write-Host "[FATAL] $hiddenLauncher not found" -ForegroundColor Red
+    exit 1
+}
 
 Write-Host "[install-bridge-autostart] registering task '$TaskName'" -ForegroundColor Yellow
-Write-Host "  script: $autostartScript"
+Write-Host "  launcher: $hiddenLauncher (wraps bridge-autostart.ps1 with hidden window)"
 
 # 删旧任务（不报错）
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 
-# 注册
+# 注册：用 wscript.exe 调 VBS shim → VBS 用 windowStyle=0 调 powershell
+# 这样登录时不会弹任何控制台
 $action = New-ScheduledTaskAction `
-    -Execute 'powershell.exe' `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$autostartScript`""
+    -Execute 'wscript.exe' `
+    -Argument "`"$hiddenLauncher`""
 
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
