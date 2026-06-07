@@ -1,9 +1,10 @@
 {
+    "_comment": "INSTALL TIME ONLY — install.ps1 will overwrite this file with the absolute path resolved on the current machine. VS Code spawns hook commands directly (not through cmd.exe), so %USERPROFILE% is NOT expanded; the json must contain an absolute path.",
     "hooks": {
         "Stop": [
             {
                 "type": "command",
-                "windows": "cmd /c \"powershell -NoProfile -ExecutionPolicy Bypass -File \"\"%USERPROFILE%\\.copilot\\hooks\\feishu-stop-guard.ps1\"\"\"",
+                "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"<install.ps1 will fill absolute path here>\"",
                 "timeout": 10
             }
         ]

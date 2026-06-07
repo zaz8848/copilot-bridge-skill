@@ -66,17 +66,37 @@ Write-Host "[2/4] 装 Stop hook 到 $hooksRoot ..." -ForegroundColor Yellow
 if (-not (Test-Path $hooksRoot)) {
     New-Item -Path $hooksRoot -ItemType Directory -Force | Out-Null
 }
-$hookFiles = @('feishu-stop-guard.json', 'feishu-stop-guard.ps1')
-foreach ($f in $hookFiles) {
-    $src = Join-Path $repoRoot "hooks\$f"
-    $dst = Join-Path $hooksRoot $f
-    if (-not (Test-Path $src)) {
-        Write-Host "  ⚠  源文件不存在，跳过：$src" -ForegroundColor Yellow
-        continue
-    }
-    Copy-Item $src $dst -Force
-    Write-Host "  ✅ $f -> $dst" -ForegroundColor Green
+
+# 2a. ps1 脚本：直接 copy（仓里就是最终版）
+$ps1Src = Join-Path $repoRoot 'hooks\feishu-stop-guard.ps1'
+$ps1Dst = Join-Path $hooksRoot 'feishu-stop-guard.ps1'
+if (Test-Path $ps1Src) {
+    Copy-Item $ps1Src $ps1Dst -Force
+    Write-Host "  ✅ feishu-stop-guard.ps1 -> $ps1Dst" -ForegroundColor Green
 }
+else {
+    Write-Host "  ⚠  源文件不存在：$ps1Src" -ForegroundColor Yellow
+}
+
+# 2b. json 配置：用当前用户的绝对路径生成（不能 copy 模板，因为 VS Code spawn 不展开 %USERPROFILE%）
+$jsonDst = Join-Path $hooksRoot 'feishu-stop-guard.json'
+$cmdLine = 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + $ps1Dst + '"'
+$cfg = @{
+    hooks = @{
+        Stop = @(
+            @{
+                type    = 'command'
+                windows = $cmdLine
+                timeout = 10
+            }
+        )
+    }
+}
+$json = $cfg | ConvertTo-Json -Depth 6
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($jsonDst, $json, $utf8NoBom)
+Write-Host "  ✅ feishu-stop-guard.json -> $jsonDst（绝对路径已写死）" -ForegroundColor Green
+
 Write-Host '  Stop hook 只在 workspace `.github/copilot-instructions.md` 含 `comm_mode: feishu` 时生效。' -ForegroundColor Gray
 Write-Host '  其它 workspace 零影响。临时禁用：重命名 feishu-stop-guard.json 加 .disabled 后缀。' -ForegroundColor Gray
 Write-Host ''
