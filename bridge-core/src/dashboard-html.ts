@@ -386,11 +386,12 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
     background: var(--ivory-light);
     border: 1px solid var(--ink); border-radius: 10px;
     box-shadow: 0 36px 90px -24px rgba(31, 26, 20, 0.45);
-    overflow-y: auto;
+    flex-direction: column;
     transform: translateY(16px) scale(0.97); opacity: 0;
     transition: transform 0.28s cubic-bezier(0.2, 0.85, 0.3, 1), opacity 0.22s ease-out;
   }
-  .drawer.open { display: block; transform: translateY(0) scale(1); opacity: 1; }
+  .drawer.open { display: flex; transform: translateY(0) scale(1); opacity: 1; }
+  .drawer-scroll { flex: 1 1 auto; overflow-y: auto; }
   .drawer-head {
     padding: 28px 32px 20px; border-bottom: 1px solid var(--rule);
     background: var(--ivory-light); position: sticky; top: 0; z-index: 2;
@@ -426,7 +427,41 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
   }
   .drawer-head .actions button:hover { border-color: var(--ink); color: var(--ink); }
   .drawer-head .actions button.danger:hover { border-color: var(--terra); color: var(--terra); background: #fdf6f0; }
-  .drawer-body { padding: 24px 32px 60px; }
+  .drawer-body { padding: 24px 32px 32px; }
+
+  /* ─── Drawer composer (聊天底部输入条) ─── */
+  .composer {
+    flex: 0 0 auto; border-top: 1px solid var(--rule);
+    background: var(--paper);
+    padding: 14px 22px 14px 22px;
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+  .composer .target {
+    flex: 0 0 auto; font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--ink-mute); padding: 8px 10px 0 0; line-height: 1.3;
+    max-width: 130px; word-break: break-all;
+  }
+  .composer .target.has-task { color: var(--terra); }
+  .composer textarea {
+    flex: 1 1 auto; min-height: 40px; max-height: 180px;
+    background: var(--ivory-light); color: var(--ink);
+    border: 1px solid var(--rule);
+    padding: 10px 12px; font-family: var(--serif); font-size: 14px;
+    line-height: 1.5; outline: none; resize: none;
+    transition: border-color 0.15s;
+  }
+  .composer textarea:focus { border-color: var(--terra); }
+  .composer textarea:disabled { background: var(--rule); color: var(--ink-mute); cursor: not-allowed; }
+  .composer .send {
+    flex: 0 0 auto; padding: 10px 20px; font-family: var(--mono);
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.15em; cursor: pointer;
+    border: 1px solid var(--terra); background: var(--terra); color: var(--paper);
+    transition: all 0.15s;
+  }
+  .composer .send:hover { background: var(--terra-deep); border-color: var(--terra-deep); }
+  .composer .send:disabled { background: var(--rule); border-color: var(--rule); color: var(--ink-mute); cursor: not-allowed; }
 
   .load-more-row { text-align: center; margin: 4px 0 22px; }
   .load-more-btn {
@@ -646,21 +681,28 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
 <!-- Drawer -->
 <div class="drawer-mask" id="drawer-mask" onclick="closeDrawer()"></div>
 <aside class="drawer" id="drawer">
-  <div class="drawer-head">
-    <div class="avatar" id="drawer-avatar"></div>
-    <div class="head-info">
-      <div class="eyebrow">CONVERSATION</div>
-      <h2 id="drawer-title">&mdash;</h2>
-      <div class="stats" id="drawer-stats"></div>
+  <div class="drawer-scroll" id="drawer-scroll">
+    <div class="drawer-head">
+      <div class="avatar" id="drawer-avatar"></div>
+      <div class="head-info">
+        <div class="eyebrow">CONVERSATION</div>
+        <h2 id="drawer-title">&mdash;</h2>
+        <div class="stats" id="drawer-stats"></div>
+      </div>
+      <div class="actions">
+        <button onclick="clearUnreadCurrent()" title="Mark all unread offline messages as read">Clear unread</button>
+        <button class="danger" onclick="deleteAgentCurrent()" title="Permanently delete this agent + all tasks + unread messages">Delete agent</button>
+        <button class="close" onclick="closeDrawer()">Close</button>
+      </div>
     </div>
-    <div class="actions">
-      <button onclick="clearUnreadCurrent()" title="Mark all unread offline messages as read">Clear unread</button>
-      <button class="danger" onclick="deleteAgentCurrent()" title="Permanently delete this agent + all tasks + unread messages">Delete agent</button>
-      <button class="close" onclick="closeDrawer()">Close</button>
-    </div>
+    <div id="drawer-inbox"></div>
+    <div class="drawer-body" id="drawer-body"></div>
   </div>
-  <div id="drawer-inbox"></div>
-  <div class="drawer-body" id="drawer-body"></div>
+  <div class="composer" id="drawer-composer">
+    <div class="target" id="composer-target">no pending task</div>
+    <textarea id="composer-text" placeholder="No AI is waiting on a card right now." rows="1" disabled></textarea>
+    <button class="send" id="composer-send" onclick="sendComposerReply()" disabled>Send</button>
+  </div>
 </aside>
 
 <!-- Modal -->
@@ -1226,9 +1268,70 @@ async function openDrawer(encodedName) {
     ]);
     renderInbox(project, inboxR.replies);
     renderHistory(project, historyR.tasks);
+    updateComposer(historyR.tasks);
   } catch (e) {
     document.getElementById('drawer-body').innerHTML = '<div class="empty">Failed to load: ' + escapeHtml(e.message) + '</div>';
   }
+}
+
+function updateComposer(tasks) {
+  const target = document.getElementById('composer-target');
+  const ta = document.getElementById('composer-text');
+  const btn = document.getElementById('composer-send');
+  const pending = (tasks || []).find(t => t.status === 'pending');
+  if (pending) {
+    target.textContent = '↦ ' + pending.task_id;
+    target.classList.add('has-task');
+    ta.dataset.taskId = pending.task_id;
+    ta.disabled = false;
+    btn.disabled = false;
+    ta.placeholder = 'Reply to AI… (Enter to send, Shift+Enter for newline)';
+  } else {
+    target.textContent = 'no pending task';
+    target.classList.remove('has-task');
+    ta.dataset.taskId = '';
+    ta.disabled = true;
+    btn.disabled = true;
+    ta.placeholder = 'No AI is waiting on a card right now.';
+  }
+}
+
+async function sendComposerReply() {
+  const ta = document.getElementById('composer-text');
+  const btn = document.getElementById('composer-send');
+  const taskId = ta.dataset.taskId;
+  const text = ta.value.trim();
+  if (!taskId) { showToast('No pending task. Open a card from a feishu workspace first.'); return; }
+  if (!text) { showToast('Empty message rejected.'); return; }
+  btn.disabled = true;
+  ta.disabled = true;
+  try {
+    const r = await fetchJSON('/api/dashboard/reply/' + taskId, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    ta.value = '';
+    autoResizeComposer();
+    showToast(r.delivered ? 'Delivered to live waiter.' : (r.mirrored ? 'Queued to pending_replies.' : 'Persisted.'));
+    refresh();
+    // 重新拉一次 history，让 composer 状态更新（pending → replied）
+    if (state.currentProject) {
+      const fresh = await fetchJSON('/api/dashboard/agent/' + encodeURIComponent(state.currentProject) + '/history?limit=' + state.currentLimit);
+      document.getElementById('drawer-body').dataset.fp = '';
+      renderHistory(state.currentProject, fresh.tasks);
+      updateComposer(fresh.tasks);
+    }
+  } catch (e) {
+    showToast('Send failed: ' + e.message);
+    ta.disabled = false;
+    btn.disabled = false;
+  }
+}
+
+function autoResizeComposer() {
+  const ta = document.getElementById('composer-text');
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 180) + 'px';
 }
 
 async function loadMoreHistory() {
@@ -1239,6 +1342,7 @@ async function loadMoreHistory() {
     // force re-render
     document.getElementById('drawer-body').dataset.fp = '';
     renderHistory(state.currentProject, r.tasks);
+    updateComposer(r.tasks);
   } catch (e) {
     showToast('Load more failed: ' + e.message);
   }
@@ -1261,6 +1365,14 @@ function closeDrawer() {
   state.currentProject = null;
   document.getElementById('drawer-mask').classList.remove('open');
   document.getElementById('drawer').classList.remove('open');
+  const ta = document.getElementById('composer-text');
+  ta.value = '';
+  ta.dataset.taskId = '';
+  ta.disabled = true;
+  ta.style.height = '';
+  document.getElementById('composer-send').disabled = true;
+  document.getElementById('composer-target').textContent = 'no pending task';
+  document.getElementById('composer-target').classList.remove('has-task');
 }
 
 function renderHistory(project, tasks) {
@@ -1387,6 +1499,16 @@ document.getElementById('sort-by').addEventListener('change', (e) => {
 });
 document.getElementById('reply-modal').addEventListener('click', (e) => { if (e.target.id === 'reply-modal') closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeDrawer(); } });
+
+// composer：Enter 发送，Shift+Enter 换行；输入时自动调整高度
+const composerTextEl = document.getElementById('composer-text');
+composerTextEl.addEventListener('input', autoResizeComposer);
+composerTextEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!document.getElementById('composer-send').disabled) sendComposerReply();
+  }
+});
 
 let timer = null;
 function setupAutoRefresh() {
