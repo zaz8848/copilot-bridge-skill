@@ -33,7 +33,7 @@ $repoRoot = $PSScriptRoot
 # 参考：https://code.visualstudio.com/docs/agent-customization/agent-skills
 #       https://code.visualstudio.com/docs/agent-customization/hooks
 $skillsRoot = Join-Path $HOME '.copilot\skills'
-$hooksRoot  = Join-Path $HOME '.copilot\hooks'
+$hooksRoot = Join-Path $HOME '.copilot\hooks'
 
 Write-Host '============================================================' -ForegroundColor Cyan
 Write-Host '  copilot-bridge-skill 安装器' -ForegroundColor Cyan
