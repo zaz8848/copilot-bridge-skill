@@ -370,6 +370,204 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
   .chart-body .donut-key {
     font-family: var(--mono); font-size: 10px; fill: var(--ink-soft);
   }
+  .chart-body-tall { height: 220px; }
+  /* heatmap legend swatches */
+  .chart-legend i.sw.heat-fast { background: #5b9e8a; }
+  .chart-legend i.sw.heat-mid  { background: #d99e3e; }
+  .chart-legend i.sw.heat-slow { background: var(--terra); }
+  .chart-legend i.sw.heat-none { background: var(--ivory-deeper); border: 1px solid var(--rule); }
+
+  /* heatmap cells */
+  .chart-body .hm-cell { stroke: var(--paper); stroke-width: 1; }
+  .chart-body .hm-row-label, .chart-body .hm-col-label {
+    font-family: var(--mono); font-size: 9px; fill: var(--ink-faint);
+    letter-spacing: 0.05em;
+  }
+
+  /* wordcloud */
+  .wordcloud {
+    width: 100%; height: 100%;
+    display: flex; flex-wrap: wrap; gap: 4px 12px;
+    align-content: center; justify-content: center;
+    padding: 4px 6px; overflow: hidden; line-height: 1.2;
+  }
+  .wordcloud .wc-word {
+    font-family: var(--serif); color: var(--ink);
+    transition: color 0.2s;
+    display: inline-block;
+  }
+  .wordcloud .wc-word:hover { color: var(--terra); }
+  .wordcloud .wc-word .wc-n {
+    font-family: var(--mono); font-size: 9px; color: var(--ink-faint); margin-left: 3px;
+  }
+
+  /* trends toolbar button */
+  .wrapped-btn {
+    background: var(--ink); color: var(--ivory-light);
+    border: 1px solid var(--ink); padding: 7px 16px;
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .wrapped-btn:hover { background: var(--terra); border-color: var(--terra); }
+
+  /* ─── Daily digest (A1-lite) ─── */
+  .digest-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 14px; margin-bottom: 36px;
+  }
+  .digest-card {
+    background: var(--paper); border: 1px solid var(--rule);
+    padding: 16px 18px; cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+  .digest-card:hover {
+    transform: translateY(-2px); border-color: var(--ink);
+    box-shadow: 0 6px 18px -10px rgba(31, 26, 20, 0.25);
+  }
+  .digest-card .dc-head {
+    display: flex; gap: 8px; align-items: baseline;
+    border-bottom: 1px dashed var(--rule); padding-bottom: 6px; margin-bottom: 8px;
+  }
+  .digest-card .dc-head .dc-name {
+    font-family: var(--serif); font-size: 15px; color: var(--ink); flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .digest-card .dc-head .dc-count {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-mute);
+    letter-spacing: 0.1em; text-transform: uppercase; flex-shrink: 0;
+  }
+  .digest-card .dc-head .dc-count strong { color: var(--terra-deep); font-weight: 600; }
+  .digest-card .dc-line {
+    font-family: var(--serif); font-size: 13px; color: var(--ink-soft);
+    line-height: 1.45; margin-bottom: 4px;
+    overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .digest-card .dc-line::before {
+    content: '· '; color: var(--ink-faint);
+  }
+
+  /* ─── Personality strip (A4) ─── */
+  .personality {
+    margin: 0 32px 18px; padding: 14px 18px;
+    background: var(--ivory-deeper); border: 1px solid var(--rule);
+    border-left: 3px solid var(--terra);
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft);
+    letter-spacing: 0.04em;
+    display: flex; flex-wrap: wrap; gap: 14px 22px;
+  }
+  .personality .pn-item strong {
+    color: var(--ink); font-weight: 600; font-family: var(--serif);
+    font-size: 14px;
+  }
+
+  /* ─── Wrapped poster ─── */
+  .wrapped-modal { z-index: 130; padding: 32px; }
+  .wrapped-modal.open { display: flex; }
+  .wrapped-shell {
+    width: 100%; max-width: 720px; max-height: calc(100vh - 64px);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .wrapped-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--ivory-light); border: 1px solid var(--ink); padding: 12px 16px;
+  }
+  .wrapped-tabs { display: flex; gap: 8px; }
+  .wrapped-tabs .wt {
+    background: transparent; border: 1px solid var(--rule-deep); color: var(--ink-soft);
+    padding: 7px 16px; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+  }
+  .wrapped-tabs .wt:hover { border-color: var(--ink); color: var(--ink); }
+  .wrapped-tabs .wt.active { background: var(--ink); color: var(--ivory-light); border-color: var(--ink); }
+  .wrapped-actions { display: flex; gap: 8px; }
+  .wrapped-actions button {
+    background: transparent; border: 1px solid var(--rule-deep); color: var(--ink-soft);
+    padding: 7px 18px; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+  }
+  .wrapped-actions button:hover { border-color: var(--ink); color: var(--ink); }
+  .wrapped-actions .primary { background: var(--terra); border-color: var(--terra); color: var(--paper); }
+  .wrapped-actions .primary:hover { background: var(--terra-deep); border-color: var(--terra-deep); }
+  .wrapped-poster-wrap { flex: 1 1 auto; overflow-y: auto; }
+  .wrapped-poster {
+    background: var(--ivory-light); width: 600px; height: 800px;
+    margin: 0 auto; padding: 56px 50px; box-sizing: border-box;
+    border: 1px solid var(--ink); position: relative;
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px -16px rgba(31, 26, 20, 0.4);
+  }
+  .wrapped-poster::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+    background: var(--terra);
+  }
+  .wrapped-poster .wp-eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.3em;
+    text-transform: uppercase; color: var(--ink-mute); margin-bottom: 10px;
+  }
+  .wrapped-poster .wp-title {
+    font-family: var(--serif); font-size: 56px; font-weight: 400; line-height: 1;
+    letter-spacing: -0.025em; color: var(--ink); margin-bottom: 6px;
+  }
+  .wrapped-poster .wp-title em { font-style: italic; color: var(--terra); }
+  .wrapped-poster .wp-sub {
+    font-family: var(--serif); font-style: italic; font-size: 16px;
+    color: var(--ink-mute); margin-bottom: 28px;
+  }
+  .wrapped-poster .wp-hero {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink);
+    margin-bottom: 22px;
+  }
+  .wrapped-poster .wp-hero .wp-stat {
+    padding: 18px 16px; border-right: 1px solid var(--rule);
+  }
+  .wrapped-poster .wp-hero .wp-stat:last-child { border-right: none; }
+  .wrapped-poster .wp-hero .wp-stat .v {
+    font-family: var(--serif); font-size: 42px; font-weight: 400; color: var(--ink); line-height: 1;
+  }
+  .wrapped-poster .wp-hero .wp-stat .l {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-mute); margin-top: 6px;
+  }
+  .wrapped-poster .wp-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px 22px; margin-bottom: 22px;
+  }
+  .wrapped-poster .wp-grid .wp-stat .v {
+    font-family: var(--serif); font-size: 22px; color: var(--ink); line-height: 1.1;
+  }
+  .wrapped-poster .wp-grid .wp-stat .v strong { color: var(--terra); font-weight: 600; }
+  .wrapped-poster .wp-grid .wp-stat .l {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-mute); margin-top: 5px;
+  }
+  .wrapped-poster .wp-topbox {
+    border: 1px solid var(--rule); padding: 14px 16px; margin-bottom: 22px;
+  }
+  .wrapped-poster .wp-topbox .wp-topbox-head {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-mute); margin-bottom: 10px;
+  }
+  .wrapped-poster .wp-topbox .wp-toprow {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--serif); font-size: 14px; color: var(--ink);
+    padding: 4px 0; border-bottom: 1px dashed var(--rule);
+  }
+  .wrapped-poster .wp-topbox .wp-toprow:last-child { border-bottom: none; }
+  .wrapped-poster .wp-topbox .wp-toprow .rank {
+    font-family: var(--mono); color: var(--ink-mute); font-size: 11px; margin-right: 8px;
+  }
+  .wrapped-poster .wp-topbox .wp-toprow .pn { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+  .wrapped-poster .wp-topbox .wp-toprow .pc { font-family: var(--mono); font-size: 11px; color: var(--terra-deep); font-weight: 600; }
+  .wrapped-poster .wp-foot {
+    margin-top: auto; padding-top: 14px; border-top: 1px solid var(--rule);
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-mute);
+  }
+  .wrapped-poster .wp-foot strong { color: var(--terra); }
+
   @media (max-width: 980px) {
     .charts-grid { grid-template-columns: 1fr; }
     .chart-body { height: 200px; }
@@ -768,6 +966,9 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
   <div class="section-title">
     <h2><em>Trends</em></h2>
     <span class="count" id="charts-updated">&mdash;</span>
+    <div class="right">
+      <button class="wrapped-btn" onclick="openWrapped('week')" title="Generate a weekly poster">Generate Wrapped</button>
+    </div>
   </div>
   <div class="charts-grid">
     <div class="chart-card chart-wide">
@@ -784,7 +985,28 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
       <div class="chart-head"><span class="eyebrow">All time</span><h3>Status mix</h3></div>
       <div class="chart-body" id="chart-status"></div>
     </div>
+    <div class="chart-card chart-wide">
+      <div class="chart-head"><span class="eyebrow">Past 30 days · your reply speed</span><h3>Response heatmap</h3></div>
+      <div class="chart-body chart-body-tall" id="chart-heatmap"></div>
+      <div class="chart-legend">
+        <span><i class="sw heat-fast"></i>&lt; 1 min</span>
+        <span><i class="sw heat-mid"></i>~ 5 min</span>
+        <span><i class="sw heat-slow"></i>&gt; 1 hour</span>
+        <span><i class="sw heat-none"></i>no data</span>
+      </div>
+    </div>
+    <div class="chart-card chart-wide">
+      <div class="chart-head"><span class="eyebrow">Past 7 days · what AI keeps bringing up</span><h3>Topic cloud</h3></div>
+      <div class="chart-body chart-body-tall" id="chart-wordcloud"></div>
+    </div>
   </div>
+
+  <!-- ─── A1-lite 今日摘要 ─── -->
+  <div class="section-title">
+    <h2><em>Today</em> &middot; what your companions are doing</h2>
+    <span class="count" id="digest-count">&mdash;</span>
+  </div>
+  <div class="digest-grid" id="digest-grid"></div>
 
   <div class="section-title">
     <h2>All <em>companions</em></h2>
@@ -823,6 +1045,7 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
       </div>
     </div>
     <div id="drawer-inbox"></div>
+    <div id="drawer-personality"></div>
     <div class="drawer-body" id="drawer-body"></div>
   </div>
   <div class="composer" id="drawer-composer">
@@ -842,6 +1065,26 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
     <div class="modal-actions">
       <button onclick="closeModal()">Cancel</button>
       <button class="primary" onclick="submitReply()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Wrapped poster modal -->
+<div class="modal wrapped-modal" id="wrapped-modal">
+  <div class="wrapped-shell">
+    <div class="wrapped-toolbar">
+      <div class="wrapped-tabs">
+        <button class="wt active" data-range="week" onclick="switchWrapped('week')">Week</button>
+        <button class="wt" data-range="month" onclick="switchWrapped('month')">Month</button>
+        <button class="wt" data-range="year" onclick="switchWrapped('year')">Year</button>
+      </div>
+      <div class="wrapped-actions">
+        <button onclick="downloadWrapped()" class="primary">Download PNG</button>
+        <button onclick="closeWrapped()">Close</button>
+      </div>
+    </div>
+    <div class="wrapped-poster-wrap">
+      <div class="wrapped-poster" id="wrapped-poster"></div>
     </div>
   </div>
 </div>
@@ -1381,6 +1624,7 @@ async function openDrawer(encodedName) {
   document.getElementById('drawer-title').textContent = project;
   document.getElementById('drawer-stats').innerHTML = '';
   document.getElementById('drawer-inbox').innerHTML = '';
+  document.getElementById('drawer-personality').innerHTML = '';
   document.getElementById('drawer-body').innerHTML =
     '<div class="empty">Loading conversation&hellip;</div>';
   document.getElementById('drawer-mask').classList.add('open');
@@ -1388,6 +1632,7 @@ async function openDrawer(encodedName) {
   // reset fingerprint to force first render after limit change
   document.getElementById('drawer-body').dataset.fp = '';
 
+  loadPersonality(project); // fire-and-forget
   try {
     const [historyR, inboxR] = await Promise.all([
       fetchJSON('/api/dashboard/agent/' + encodeURIComponent(project) + '/history?limit=' + state.currentLimit),
@@ -1511,6 +1756,7 @@ function closeDrawer() {
   state.currentProject = null;
   document.getElementById('drawer-mask').classList.remove('open');
   document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-personality').innerHTML = '';
   const ta = document.getElementById('composer-text');
   ta.value = '';
   ta.dataset.taskId = '';
@@ -1595,6 +1841,9 @@ async function loadCharts() {
     renderHourly(r.hourly_24h || []);
     renderDaily(r.daily_14d || []);
     renderStatusDonut(r.status_distribution || []);
+    renderHeatmap(r.heatmap_30d || []);
+    renderWordcloud(r.wordcloud_7d || []);
+    renderDigest(r.digest_today || []);
   } catch (e) {
     // 失败就让上一次的图留着，不弹错以免太吵
     console.warn('loadCharts failed:', e);
@@ -1732,6 +1981,253 @@ function fmtDay(ms) {
   return (d.getMonth() + 1) + '/' + d.getDate();
 }
 
+// ── A7 · Response heatmap (7×24, median reply lag color) ───
+function renderHeatmap(cells) {
+  const el = document.getElementById('chart-heatmap');
+  if (!el) return;
+  const W = 600, H = 220;
+  const labelW = 32, labelH = 18;
+  const gridW = W - labelW;
+  const gridH = H - labelH;
+  const cellW = gridW / 24;
+  const cellH = gridH / 7;
+  // build matrix
+  const grid = [];
+  for (let d = 0; d < 7; d++) { grid.push(new Array(24).fill(null)); }
+  for (const c of cells) {
+    if (c && grid[c.d]) grid[c.d][c.h] = c;
+  }
+  const dows = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  let cellSvg = '';
+  for (let d = 0; d < 7; d++) {
+    for (let h = 0; h < 24; h++) {
+      const x = labelW + h * cellW + 1;
+      const y = labelH + d * cellH + 1;
+      const w = cellW - 2;
+      const ch = cellH - 2;
+      const cell = grid[d][h];
+      let fill = '#f0e9dc'; // empty paper-ish
+      let title = dows[d] + ' ' + String(h).padStart(2, '0') + ':00 — no data';
+      if (cell) {
+        const minutes = cell.median_ms / 60000;
+        if (minutes < 1) fill = '#5b9e8a';            // < 1 min, green
+        else if (minutes < 5) fill = '#82c19c';        // 1-5 min, light green
+        else if (minutes < 15) fill = '#d99e3e';       // 5-15 min, amber
+        else if (minutes < 60) fill = '#c9764e';       // 15-60, terra-light
+        else fill = '#a04b2d';                          // > 1h, dark terra
+        title = dows[d] + ' ' + String(h).padStart(2, '0') + ':00 — median ' + fmtMs(cell.median_ms) + ' (n=' + cell.n + ')';
+      }
+      cellSvg += '<rect class="hm-cell" x="' + x + '" y="' + y + '" width="' + w + '" height="' + ch + '" fill="' + fill + '"><title>' + title + '</title></rect>';
+    }
+  }
+  // row labels (weekday)
+  let rowLabels = '';
+  for (let d = 0; d < 7; d++) {
+    rowLabels += '<text class="hm-row-label" x="' + (labelW - 4) + '" y="' + (labelH + d * cellH + cellH / 2 + 3) + '" text-anchor="end">' + dows[d].slice(0, 3) + '</text>';
+  }
+  // column labels (every 4h)
+  let colLabels = '';
+  for (let h = 0; h < 24; h += 4) {
+    colLabels += '<text class="hm-col-label" x="' + (labelW + h * cellW + cellW / 2) + '" y="' + (labelH - 5) + '" text-anchor="middle">' + String(h).padStart(2, '0') + '</text>';
+  }
+  el.innerHTML = svgFrame(W, H, cellSvg + rowLabels + colLabels);
+}
+
+function fmtMs(ms) {
+  if (ms == null) return '—';
+  const s = ms / 1000;
+  if (s < 60) return s.toFixed(0) + 's';
+  const m = s / 60;
+  if (m < 60) return m.toFixed(0) + 'min';
+  const h = m / 60;
+  if (h < 24) return h.toFixed(1) + 'h';
+  return (h / 24).toFixed(1) + 'd';
+}
+
+// ── A8 · Topic word cloud (size by freq, atelier serif) ───
+function renderWordcloud(words) {
+  const el = document.getElementById('chart-wordcloud');
+  if (!el) return;
+  if (!words.length) { el.innerHTML = '<div class="empty">Not enough text yet. Send more cards this week.</div>'; return; }
+  const max = Math.max(...words.map(w => w.count));
+  const min = Math.min(...words.map(w => w.count));
+  const minSize = 11, maxSize = 38;
+  const html = words.map(w => {
+    const t = max === min ? 1 : (w.count - min) / (max - min);
+    const size = minSize + t * (maxSize - minSize);
+    const opacity = 0.55 + t * 0.45;
+    return '<span class="wc-word" style="font-size:' + size.toFixed(0) + 'px;opacity:' + opacity.toFixed(2) + '" title="' + escapeHtml(w.word) + ': ' + w.count + ' times">' + escapeHtml(w.word) + '<span class="wc-n">' + w.count + '</span></span>';
+  }).join('');
+  el.innerHTML = '<div class="wordcloud">' + html + '</div>';
+}
+
+// ── A1-lite · Today's digest cards ────────────────────────
+function renderDigest(items) {
+  const el = document.getElementById('digest-grid');
+  const count = document.getElementById('digest-count');
+  if (!el) return;
+  if (!items.length) {
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1">Nothing today &mdash; companions are quiet.</div>';
+    count.textContent = '0 companions today';
+    return;
+  }
+  count.textContent = items.length + ' companion' + (items.length === 1 ? '' : 's') + ' &middot; ' + items.reduce((s, x) => s + x.count, 0) + ' cards';
+  el.innerHTML = items.map(d => {
+    const lines = d.lines.map(l => '<div class="dc-line">' + escapeHtml(l) + '</div>').join('');
+    const safeEnc = encodeURIComponent(d.project_name);
+    const pendingBit = d.pending > 0 ? '<strong>' + d.pending + ' pending</strong> &middot; ' : '';
+    return '<div class="digest-card" onclick="openDrawer(\\'' + safeEnc + '\\')">' +
+      '<div class="dc-head">' +
+        '<div class="dc-name">' + escapeHtml(d.project_name) + '</div>' +
+        '<div class="dc-count">' + pendingBit + d.count + ' total</div>' +
+      '</div>' +
+      lines +
+    '</div>';
+  }).join('');
+}
+
+// ── A4 · Per-agent personality strip ───────────────────────
+async function loadPersonality(project) {
+  const el = document.getElementById('drawer-personality');
+  if (!el) return;
+  el.innerHTML = '';
+  try {
+    const r = await fetchJSON('/api/dashboard/agent/' + encodeURIComponent(project) + '/personality');
+    if (r.empty) return;
+    const items = [
+      '<div class="pn-item">~<strong>' + r.avg_per_day + '</strong> cards/day</div>',
+      '<div class="pn-item">mostly <strong>' + escapeHtml(r.top_level) + '</strong> &middot; ' + r.top_level_pct + '%</div>',
+      '<div class="pn-item">median reply <strong>' + (r.median_reply_ms == null ? '—' : fmtMs(r.median_reply_ms)) + '</strong></div>',
+      '<div class="pn-item">fastest <strong>' + (r.fastest_reply_ms == null ? '—' : fmtMs(r.fastest_reply_ms)) + '</strong></div>',
+      '<div class="pn-item">peak hour <strong>' + String(r.peak_hour).padStart(2, '0') + ':00</strong></div>',
+      '<div class="pn-item">spanning <strong>' + r.day_count + '</strong> day' + (r.day_count === 1 ? '' : 's') + '</div>',
+    ];
+    if (r.cancelled > 0) items.push('<div class="pn-item"><strong>' + r.cancelled + '</strong> cancelled</div>');
+    el.innerHTML = '<div class="personality">' + items.join('') + '</div>';
+  } catch (e) {
+    console.warn('personality failed:', e);
+  }
+}
+
+// ── A3 · Wrapped poster ────────────────────────────────────
+const WRAPPED_STATE = { range: 'week', data: null };
+
+async function openWrapped(range) {
+  WRAPPED_STATE.range = range || 'week';
+  document.querySelectorAll('.wrapped-tabs .wt').forEach(b => b.classList.toggle('active', b.dataset.range === WRAPPED_STATE.range));
+  document.getElementById('wrapped-modal').classList.add('open');
+  await renderWrapped();
+}
+function closeWrapped() {
+  document.getElementById('wrapped-modal').classList.remove('open');
+}
+async function switchWrapped(range) {
+  WRAPPED_STATE.range = range;
+  document.querySelectorAll('.wrapped-tabs .wt').forEach(b => b.classList.toggle('active', b.dataset.range === range));
+  await renderWrapped();
+}
+async function renderWrapped() {
+  const target = document.getElementById('wrapped-poster');
+  target.innerHTML = '<div class="empty" style="padding:80px">Loading wrapped…</div>';
+  try {
+    const r = await fetchJSON('/api/dashboard/wrapped?range=' + WRAPPED_STATE.range);
+    WRAPPED_STATE.data = r;
+    target.innerHTML = wrappedPosterHTML(r);
+  } catch (e) {
+    target.innerHTML = '<div class="empty" style="padding:80px">Failed: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+function wrappedPosterHTML(r) {
+  if (r.empty) {
+    return '<div class="wp-eyebrow">' + escapeHtml(r.label) + '</div><div class="wp-title">No data yet</div><div class="wp-sub">Send more cards to fill this poster.</div>';
+  }
+  const dows = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const topProjectsRows = (r.top_projects || []).map((p, i) =>
+    '<div class="wp-toprow"><span class="rank">' + String(i + 1).padStart(2, '0') + '</span><span class="pn">' + escapeHtml(p.name) + '</span><span class="pc">' + p.count + '</span></div>'
+  ).join('');
+  return '' +
+    '<div class="wp-eyebrow">Copilot Bridge &middot; ' + escapeHtml(r.label) + '</div>' +
+    '<div class="wp-title">You shipped <em>' + r.total_cards + '</em> cards</div>' +
+    '<div class="wp-sub">across ' + r.project_count + ' companions, with a ' + r.reply_rate_pct + '% reply rate.</div>' +
+    '<div class="wp-hero">' +
+      '<div class="wp-stat"><div class="v">' + r.total_cards + '</div><div class="l">Total cards</div></div>' +
+      '<div class="wp-stat"><div class="v">' + r.reply_rate_pct + '%</div><div class="l">Reply rate</div></div>' +
+    '</div>' +
+    '<div class="wp-grid">' +
+      '<div class="wp-stat"><div class="v">' + String(r.peak_hour).padStart(2, '0') + ':00</div><div class="l">Peak hour</div></div>' +
+      '<div class="wp-stat"><div class="v">' + dows[r.peak_dow] + '</div><div class="l">Most active day</div></div>' +
+      '<div class="wp-stat"><div class="v"><strong>' + fmtMs(r.median_reply_ms) + '</strong></div><div class="l">Median reply</div></div>' +
+      '<div class="wp-stat"><div class="v"><strong>' + fmtMs(r.fastest_reply_ms) + '</strong></div><div class="l">Fastest reply</div></div>' +
+      '<div class="wp-stat"><div class="v">' + r.longest_streak + '</div><div class="l">Longest streak (cards within 5 min)</div></div>' +
+      '<div class="wp-stat"><div class="v">' + r.replied_count + '</div><div class="l">Cards replied</div></div>' +
+    '</div>' +
+    '<div class="wp-topbox">' +
+      '<div class="wp-topbox-head">Top companions</div>' +
+      topProjectsRows +
+    '</div>' +
+    '<div class="wp-foot"><span>copilot-bridge</span><span><strong>' + escapeHtml(r.label) + '</strong></span></div>';
+}
+
+// 用 SVG foreignObject 包裹生成 PNG（不依赖外部库）。
+function downloadWrapped() {
+  const node = document.getElementById('wrapped-poster');
+  if (!node || !node.firstChild) { showToast('Nothing to export.'); return; }
+  // 把节点深拷贝 + inline 样式
+  // 关键技巧：把 DOM 当 foreignObject 塞进 SVG → 转 dataURL → 绘制到 canvas
+  const w = node.offsetWidth || 600;
+  const h = node.offsetHeight || 800;
+  // 内联所有计算样式：太重，简化方案 = 直接克隆带 style 属性的方法
+  // 用 XMLSerializer + foreignObject 直接出 PNG
+  const clone = node.cloneNode(true);
+  // 复制 computed style 到内联（关键属性）
+  inlineCriticalStyles(node, clone);
+  const data = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+    '<foreignObject width="100%" height="100%">' +
+    '<div xmlns="http://www.w3.org/1999/xhtml">' + clone.outerHTML + '</div>' +
+    '</foreignObject></svg>';
+  const blob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = w * 2; canvas.height = h * 2; // 2x for retina
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#faf7ef';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob((png) => {
+      if (!png) { showToast('Export failed.'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(png);
+      a.download = 'copilot-bridge-wrapped-' + (WRAPPED_STATE.range || 'week') + '-' + Date.now() + '.png';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      showToast('Saved PNG.');
+    }, 'image/png');
+  };
+  img.onerror = () => { showToast('Export failed (browser refused SVG → canvas).'); URL.revokeObjectURL(url); };
+  img.src = url;
+}
+
+function inlineCriticalStyles(srcRoot, dstRoot) {
+  // 把 srcRoot 子树的关键样式 inline 到 dstRoot 子树（DFS）
+  const srcAll = [srcRoot, ...srcRoot.querySelectorAll('*')];
+  const dstAll = [dstRoot, ...dstRoot.querySelectorAll('*')];
+  for (let i = 0; i < srcAll.length && i < dstAll.length; i++) {
+    const cs = window.getComputedStyle(srcAll[i]);
+    const dst = dstAll[i];
+    const props = ['color','background-color','background','font-family','font-size','font-weight','font-style','letter-spacing','line-height','text-transform','padding','padding-top','padding-right','padding-bottom','padding-left','margin','margin-top','margin-right','margin-bottom','margin-left','border','border-top','border-right','border-bottom','border-left','border-color','border-width','border-style','display','flex','flex-direction','justify-content','align-items','gap','grid-template-columns','grid-template-rows','width','height','position','top','left','right','bottom','text-align','box-sizing','overflow','min-width','max-width','min-height','max-height'];
+    let style = dst.getAttribute('style') || '';
+    for (const p of props) {
+      const v = cs.getPropertyValue(p);
+      if (v) style += p + ':' + v + ';';
+    }
+    dst.setAttribute('style', style);
+  }
+}
+
 // ── Modal ────────────────────────────────────────────────
 function openReply(taskId) {
   document.getElementById('reply-task-id').textContent = taskId;
@@ -1792,7 +2288,8 @@ document.getElementById('sort-by').addEventListener('change', (e) => {
   renderResidents();
 });
 document.getElementById('reply-modal').addEventListener('click', (e) => { if (e.target.id === 'reply-modal') closeModal(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeDrawer(); } });
+document.getElementById('wrapped-modal').addEventListener('click', (e) => { if (e.target.id === 'wrapped-modal') closeWrapped(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeWrapped(); closeDrawer(); } });
 
 // composer：Enter 发送，Shift+Enter 换行；输入时自动调整高度
 const composerTextEl = document.getElementById('composer-text');

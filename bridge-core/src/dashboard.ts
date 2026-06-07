@@ -28,6 +28,27 @@ function ensureLocalOnly(req: Request, res: Response): boolean {
   return true;
 }
 
+// 抽 card 文本第一行有意义的内容（用于 A1-lite digest）：
+// - 去 markdown 头 `#` / quote `>` / list `-` `*`
+// - 跳过空白和纯标点
+// - 截到 80 字
+function extractFirstLine(md: string | null): string {
+  if (!md) return '';
+  const lines = md.split(/\r?\n/);
+  for (let raw of lines) {
+    let l = raw.trim();
+    if (!l) continue;
+    // 去 markdown 前缀
+    l = l.replace(/^#+\s*/, '').replace(/^[>*\-]+\s*/, '').replace(/^\d+\.\s*/, '');
+    l = l.replace(/^\*\*(.+?)\*\*/, '$1');
+    l = l.trim();
+    if (!l) continue;
+    if (l.length < 2) continue;
+    return l.length > 80 ? l.slice(0, 80) + '…' : l;
+  }
+  return '';
+}
+
 interface TaskListRow {
   task_id: string;
   project_name: string;
@@ -265,14 +286,16 @@ export function mountDashboard(app: Express) {
     res.json({ project_name: project, count: enriched.length, tasks: enriched });
   });
 
-  // --- API: 图表聚合（24h 小时桶 / 14 天日桶 / 状态分布） ---
+  // --- API: 图表聚合（24h 小时桶 / 14 天日桶 / 状态分布 / 7×24 热力图 / 今日摘要 / 词云） ---
   app.get("/api/dashboard/charts", (req: Request, res: Response) => {
     if (!ensureLocalOnly(req, res)) return;
     const now = Date.now();
     const day24Ms = 24 * 3600 * 1000;
     const day14Ms = 14 * 86400 * 1000;
+    const day30Ms = 30 * 86400 * 1000;
     const since24 = now - day24Ms;
     const since14 = now - day14Ms;
+    const since30 = now - day30Ms;
 
     // #1 过去 24h 按小时分桶
     const tasks24 = db.prepare(
@@ -325,11 +348,221 @@ export function mountDashboard(app: Express) {
       `SELECT status, COUNT(*) AS n FROM tasks GROUP BY status`
     ).all() as Array<{ status: string; n: number }>;
 
+    // #A7 过去 30 天 7(weekday)×24(hour) 中位回复延迟（毫秒），分桶
+    // 用 reply_at 落 weekday/hour，因为 reply 那一刻才是"我回应的时段"
+    const replied30 = db.prepare(
+      `SELECT created_at, reply_at FROM tasks
+       WHERE status='replied' AND reply_at IS NOT NULL AND reply_at >= ?`
+    ).all(since30) as Array<{ created_at: number; reply_at: number }>;
+    // heatmap[dayOfWeek 0=Sun][hour 0-23] = { median, n }
+    const buckets: Array<Array<number[]>> = [];
+    for (let d = 0; d < 7; d++) {
+      buckets.push([]);
+      for (let h = 0; h < 24; h++) buckets[d].push([]);
+    }
+    for (const r of replied30) {
+      const dt = new Date(r.reply_at);
+      const lag = r.reply_at - r.created_at;
+      if (lag > 0 && lag < 7 * 86400 * 1000) {
+        buckets[dt.getDay()][dt.getHours()].push(lag);
+      }
+    }
+    const heatmap: Array<{ d: number; h: number; median_ms: number; n: number }> = [];
+    for (let d = 0; d < 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        const arr = buckets[d][h];
+        if (arr.length) {
+          arr.sort((a, b) => a - b);
+          const mid = arr[Math.floor(arr.length / 2)];
+          heatmap.push({ d, h, median_ms: mid, n: arr.length });
+        }
+      }
+    }
+
+    // #A1-lite 今日摘要：按 project 聚合，每条取最多 3 张卡的"标题/首句"
+    const todayMs = todayLocal.getTime();
+    const todayCards = db.prepare(
+      `SELECT project_name, message, status, created_at
+       FROM tasks WHERE created_at >= ? ORDER BY created_at ASC`
+    ).all(todayMs) as Array<{ project_name: string; message: string; status: string; created_at: number }>;
+    const digestMap = new Map<string, { project_name: string; lines: string[]; count: number; first_seen: number; last_seen: number; pending: number; replied: number }>();
+    for (const c of todayCards) {
+      const cur = digestMap.get(c.project_name) || { project_name: c.project_name, lines: [], count: 0, first_seen: c.created_at, last_seen: c.created_at, pending: 0, replied: 0 };
+      cur.count++;
+      cur.last_seen = c.created_at;
+      if (c.status === 'pending') cur.pending++;
+      if (c.status === 'replied') cur.replied++;
+      if (cur.lines.length < 3) {
+        const firstLine = extractFirstLine(c.message);
+        if (firstLine) cur.lines.push(firstLine);
+      }
+      digestMap.set(c.project_name, cur);
+    }
+    const digest = Array.from(digestMap.values()).sort((a, b) => b.count - a.count);
+
+    // #A8 词云：本周所有 cards 文本提取高频 3+ 字母英文词（粗暴版，0 依赖）
+    const week7Ms = 7 * 86400 * 1000;
+    const weekCards = db.prepare(
+      `SELECT message FROM tasks WHERE created_at >= ?`
+    ).all(now - week7Ms) as Array<{ message: string }>;
+    const wordFreq = new Map<string, number>();
+    const stopWords = new Set([
+      'the', 'and', 'for', 'you', 'are', 'this', 'that', 'with', 'from', 'have', 'has', 'was', 'will', 'not', 'but', 'all', 'can', 'use', 'one', 'now', 'get', 'set', 'see', 'how', 'why', 'who', 'what', 'when', 'where', 'which', 'into', 'out', 'about', 'over', 'under', 'just', 'like', 'also', 'more', 'most', 'some', 'any', 'than', 'then', 'them', 'they', 'their', 'there', 'been', 'being', 'does', 'did', 'do', 'so', 'too', 'very', 'much', 'many', 'should', 'could', 'would', 'may', 'might', 'must', 'shall', 'going', 'gonna', 'wanna',
+      // markdown / code noise
+      'div', 'span', 'function', 'const', 'let', 'var', 'true', 'false', 'null', 'undefined',
+      // chinese-like noise (single chars filtered by length)
+    ]);
+    for (const c of weekCards) {
+      const text = (c.message || '').toLowerCase();
+      // 抽英文词
+      const en = text.match(/[a-z][a-z0-9_\-]{2,}/g) || [];
+      for (const w of en) {
+        if (stopWords.has(w)) continue;
+        wordFreq.set(w, (wordFreq.get(w) || 0) + 1);
+      }
+      // 抽中文 2-4 字短语（粗暴：连续中文取 2-4 字滑窗）
+      const zhMatches = text.match(/[\u4e00-\u9fa5]+/g) || [];
+      for (const seg of zhMatches) {
+        if (seg.length < 2) continue;
+        // 取 2-3 字组合，避免噪音用 length>=4 的整段
+        for (let i = 0; i + 2 <= seg.length && i < seg.length - 1; i++) {
+          const phrase = seg.slice(i, i + 2);
+          wordFreq.set(phrase, (wordFreq.get(phrase) || 0) + 1);
+        }
+      }
+    }
+    const wordcloud = Array.from(wordFreq.entries())
+      .filter(([w, n]) => n >= 3 && w.length >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 60)
+      .map(([word, count]) => ({ word, count }));
+
     res.json({
       generated_at: now,
       hourly_24h: hourBuckets,
       daily_14d: dayBuckets,
       status_distribution: statusRows,
+      heatmap_30d: heatmap,
+      digest_today: digest,
+      wordcloud_7d: wordcloud,
+    });
+  });
+
+  // --- API: 单 agent 人物画像 ---
+  app.get("/api/dashboard/agent/:project/personality", (req: Request, res: Response) => {
+    if (!ensureLocalOnly(req, res)) return;
+    const project = String(req.params.project);
+    const all = db.prepare(
+      `SELECT created_at, reply_at, level, status FROM tasks WHERE project_name=?`
+    ).all(project) as Array<{ created_at: number; reply_at: number | null; level: string; status: string }>;
+    if (!all.length) { res.json({ project_name: project, empty: true }); return; }
+
+    const total = all.length;
+    const replied = all.filter(t => t.status === 'replied' && t.reply_at);
+    const cancelled = all.filter(t => t.status === 'cancelled').length;
+    // 中位回复延迟（仅 replied）
+    const lags = replied.map(t => (t.reply_at as number) - t.created_at).sort((a, b) => a - b);
+    const medianLagMs = lags.length ? lags[Math.floor(lags.length / 2)] : null;
+    // 每天卡数（按 created_at 的天数跨度）
+    const minCreated = Math.min(...all.map(t => t.created_at));
+    const dayCount = Math.max(1, Math.ceil((Date.now() - minCreated) / 86400000));
+    const perDay = total / dayCount;
+    // level 分布
+    const byLevel = new Map<string, number>();
+    for (const t of all) byLevel.set(t.level, (byLevel.get(t.level) || 0) + 1);
+    let topLevel = 'ask';
+    let topLevelN = 0;
+    byLevel.forEach((n, k) => { if (n > topLevelN) { topLevel = k; topLevelN = n; } });
+    // 最爱小时（created_at 最频繁的小时）
+    const hourCount = new Array(24).fill(0);
+    for (const t of all) hourCount[new Date(t.created_at).getHours()]++;
+    const peakHour = hourCount.indexOf(Math.max(...hourCount));
+    // 最快回复
+    const fastestMs = lags[0] || null;
+
+    res.json({
+      project_name: project,
+      total_turns: total,
+      cancelled,
+      replied_count: replied.length,
+      day_count: dayCount,
+      avg_per_day: Number(perDay.toFixed(1)),
+      median_reply_ms: medianLagMs,
+      fastest_reply_ms: fastestMs,
+      top_level: topLevel,
+      top_level_pct: Math.round((topLevelN / total) * 100),
+      peak_hour: peakHour,
+      first_seen: minCreated,
+      last_seen: Math.max(...all.map(t => t.created_at)),
+    });
+  });
+
+  // --- API: Wrapped (周/月/年) 海报数据 ---
+  app.get("/api/dashboard/wrapped", (req: Request, res: Response) => {
+    if (!ensureLocalOnly(req, res)) return;
+    const range = String(req.query.range || 'week');
+    let sinceMs = 0;
+    let label = '';
+    const now = Date.now();
+    if (range === 'week') { sinceMs = now - 7 * 86400000; label = 'This Week'; }
+    else if (range === 'month') { sinceMs = now - 30 * 86400000; label = 'This Month'; }
+    else if (range === 'year') { sinceMs = now - 365 * 86400000; label = 'This Year'; }
+    else { sinceMs = now - 7 * 86400000; label = 'This Week'; }
+
+    const all = db.prepare(
+      `SELECT project_name, created_at, reply_at, level, status FROM tasks WHERE created_at >= ?`
+    ).all(sinceMs) as Array<{ project_name: string; created_at: number; reply_at: number | null; level: string; status: string }>;
+
+    if (!all.length) { res.json({ label, range, since: sinceMs, empty: true }); return; }
+
+    const total = all.length;
+    const replied = all.filter(t => t.status === 'replied' && t.reply_at);
+    // top 3 项目
+    const byProj = new Map<string, number>();
+    for (const t of all) byProj.set(t.project_name, (byProj.get(t.project_name) || 0) + 1);
+    const topProjects = Array.from(byProj.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, n]) => ({ name, count: n }));
+    // peak hour
+    const hourCount = new Array(24).fill(0);
+    for (const t of all) hourCount[new Date(t.created_at).getHours()]++;
+    const peakHour = hourCount.indexOf(Math.max(...hourCount));
+    // peak day of week
+    const dowCount = new Array(7).fill(0);
+    for (const t of all) dowCount[new Date(t.created_at).getDay()]++;
+    const peakDow = dowCount.indexOf(Math.max(...dowCount));
+    // 回复延迟
+    const lags = replied.map(t => (t.reply_at as number) - t.created_at).sort((a, b) => a - b);
+    const medianLagMs = lags.length ? lags[Math.floor(lags.length / 2)] : null;
+    const fastestMs = lags.length ? lags[0] : null;
+    // level 分布
+    const byLevel = new Map<string, number>();
+    for (const t of all) byLevel.set(t.level, (byLevel.get(t.level) || 0) + 1);
+    const levelMix = Array.from(byLevel.entries()).map(([level, n]) => ({ level, count: n, pct: Math.round((n / total) * 100) }));
+    // 连击：找最长连续无超过 5 min 间隔的 created_at 串
+    const sortedTs = all.map(t => t.created_at).sort((a, b) => a - b);
+    let bestStreak = 1, curStreak = 1;
+    for (let i = 1; i < sortedTs.length; i++) {
+      if (sortedTs[i] - sortedTs[i - 1] <= 5 * 60 * 1000) {
+        curStreak++;
+        if (curStreak > bestStreak) bestStreak = curStreak;
+      } else {
+        curStreak = 1;
+      }
+    }
+    const replyRate = Math.round((replied.length / total) * 100);
+
+    res.json({
+      label, range, since: sinceMs, generated_at: now,
+      total_cards: total,
+      replied_count: replied.length,
+      reply_rate_pct: replyRate,
+      top_projects: topProjects,
+      project_count: byProj.size,
+      peak_hour: peakHour,
+      peak_dow: peakDow,
+      median_reply_ms: medianLagMs,
+      fastest_reply_ms: fastestMs,
+      level_mix: levelMix,
+      longest_streak: bestStreak,
     });
   });
 
