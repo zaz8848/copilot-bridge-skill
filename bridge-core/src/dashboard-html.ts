@@ -562,6 +562,24 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
 
   .turn .actions { margin-top: 8px; margin-left: 28px; display: flex; gap: 8px; }
   .turn .actions button {
+    background: transparent; border: 1px solid var(--rule-deep); color: var(--ink-soft);
+    padding: 5px 12px; font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+  }
+  .turn .actions button:hover { border-color: var(--ink); color: var(--ink); }
+  .turn .actions button.danger:hover { border-color: var(--terra); color: var(--terra); }
+
+  /* ─── 气泡右上角 cancel 按钮（只在 pending 且未回复时出现） ─── */
+  .bubble { position: relative; }
+  .bubble .bubble-cancel {
+    position: absolute; top: 8px; right: 10px;
+    background: transparent; border: 1px solid transparent; color: var(--ink-faint);
+    padding: 3px 8px; font-family: var(--mono); font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+    opacity: 0; line-height: 1.2;
+  }
+  .bubble:hover .bubble-cancel { opacity: 1; }
+  .bubble .bubble-cancel:hover { border-color: var(--terra); color: var(--terra); background: #fdf6f0; }
     background: transparent; border: 1px solid var(--rule);
     padding: 5px 11px; font-family: var(--mono); font-size: 9.5px; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.12em;
@@ -1445,9 +1463,10 @@ function renderHistory(project, tasks) {
   body.innerHTML = loadMoreBtn + ordered.map(t => {
     const replyBubble = t.reply_text
       ? '<div class="bubble user"><div class="who">You · ' + fmtTime(t.reply_at) + ' · ' + fmtDuration(t.created_at, t.reply_at) + '</div><div class="md">' + renderMarkdown(t.reply_text) + '</div></div>'
-      : (t.status === 'pending'
-          ? '<div class="actions"><button onclick="openReply(\\'' + t.task_id + '\\')">Reply</button><button class="danger" onclick="cancelTask(\\'' + t.task_id + '\\')">Cancel</button></div>'
-          : '');
+      : '';
+    const cancelBtn = (t.status === 'pending')
+      ? '<button class="bubble-cancel" onclick="event.stopPropagation(); cancelTask(\\'' + t.task_id + '\\')" title="Cancel this pending task">Cancel</button>'
+      : '';
     return '<div class="turn">' +
       '<div class="turn-meta">' +
         '<span>' + fmtTime(t.created_at) + '</span>' +
@@ -1455,7 +1474,7 @@ function renderHistory(project, tasks) {
         '<span class="status-' + escapeHtml(t.status) + '">' + escapeHtml(t.status) + '</span>' +
         '<span style="color:var(--ink-faint);font-family:var(--mono)">' + escapeHtml(t.task_id) + '</span>' +
       '</div>' +
-      '<div class="bubble ai"><div class="who">Companion</div><div class="md">' + renderMarkdown(t.message) + '</div></div>' +
+      '<div class="bubble ai">' + cancelBtn + '<div class="who">Companion</div><div class="md">' + renderMarkdown(t.message) + '</div></div>' +
       replyBubble +
     '</div>';
   }).join('');
