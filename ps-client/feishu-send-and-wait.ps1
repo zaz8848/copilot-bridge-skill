@@ -1,4 +1,4 @@
-﻿# feishu-send-and-wait.ps1
+# feishu-send-and-wait.ps1
 # 发飞书卡片 + 短挂续杯轮询等用户回复。结果打到 stdout 让 AI 通过 get_terminal_output 读。
 #
 # 用法（典型 async 调用）：
@@ -22,8 +22,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$Message,
     [ValidateSet("ask", "done", "error")][string]$Level = "ask",
-    [Parameter(Mandatory = $true)][string]$ProjectName,
-    [string]$WorkspacePath = "",
+    [string]$ProjectName = "",      # 缺省 = 当前 cwd 的 leaf 名（VS Code 跑 run_in_terminal 时 cwd 必然是 workspace root）
+    [string]$WorkspacePath = "",    # 缺省 = 当前 cwd 的绝对路径
     [string[]]$ImagePaths,
     [string]$BridgeUrl = "http://127.0.0.1:3000",
     [int]$PollTimeoutSec = 50,   # 每轮 wait 短挂时长（秒）
@@ -31,9 +31,10 @@ param(
     [string]$ResumeTaskId = ""   # 已有 task_id 时跳过发卡，直接接力 wait
 )
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($WorkspacePath)) { $WorkspacePath = $PWD.Path }
+if ([string]::IsNullOrWhiteSpace($ProjectName))   { $ProjectName   = Split-Path -Leaf $WorkspacePath }
 
 function Invoke-JsonPost {
     param([string]$Url, [hashtable]$Body)

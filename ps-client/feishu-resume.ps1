@@ -1,4 +1,4 @@
-﻿# feishu-resume.ps1
+# feishu-resume.ps1
 # 拉取当前项目的离线收件箱（AI 离线期间用户在飞书发来的消息）。
 #
 # 用法：
@@ -8,13 +8,13 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string]$ProjectName,
+    [string]$ProjectName = "",  # 缺省 = 当前 cwd 的 leaf 名
     [string]$BridgeUrl = "http://127.0.0.1:3000"
 )
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($ProjectName)) { $ProjectName = Split-Path -Leaf $PWD.Path }
 
 $payload = @{ project_name = $ProjectName } | ConvertTo-Json -Compress
 $bytes   = [System.Text.Encoding]::UTF8.GetBytes($payload)

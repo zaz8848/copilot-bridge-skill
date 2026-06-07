@@ -52,7 +52,8 @@ $psClient = "$env:COPILOT_BRIDGE_HOME\ps-client"
 # 期望: [feishu-health] OK  version=0.0.x
 
 # 2. 拉离线收件箱（用当前 workspace 名做 project_name）
-& "$env:COPILOT_BRIDGE_HOME\ps-client\feishu-resume.ps1" -ProjectName "<当前-workspace-名>"
+& "$env:COPILOT_BRIDGE_HOME\ps-client\feishu-resume.ps1"
+# 脚本会从当前 cwd 推导 ProjectName（VS Code agent 跑时 cwd = workspace root）
 # 看到 RESUME_JSON: {"count":0,...} 就空盒；count>0 先消化离线消息
 ```
 
@@ -66,10 +67,12 @@ bridge 不在线 → 提示用户跑 `scripts/doctor.ps1` 看问题，或手动 
 
 ```powershell
 run_in_terminal(
-  command: '& "$env:COPILOT_BRIDGE_HOME\ps-client\feishu-send-and-wait.ps1" -Message "改完了，请确认部署" -Level ask -ProjectName "<项目名>" -WorkspacePath "<workspace 绝对路径>"',
+  command: '& "$env:COPILOT_BRIDGE_HOME\ps-client\feishu-send-and-wait.ps1" -Message "改完了，请确认部署" -Level ask',
   mode: "async"          # ← 硬规则：必须 async / isBackground=true
 )
 ```
+
+> ✅ **`-ProjectName` / `-WorkspacePath` 不要手传**。脚本默认从 `$PWD` 自动推导（VS Code agent 跑 `run_in_terminal` 时 cwd 必然 = workspace root）。手传反而容易拼错名字 → bridge 会自动建错群，卡发错地方。仅在明确要跨项目发卡时手动覆盖。
 
 > ⚠️ **MUST use `mode: "async"` (即 `isBackground: true`)**。
 > 用 `mode: "sync"` 会把 VS Code agent 阻塞在 long-poll 上几十分钟，期间你无法跟它交流、它无法用任何其它工具，等于死锁。Stop hook 会引擎层 block 任何最后一次 feishu 调用是 sync 的 turn，强制 AI 重新用 async 调。
