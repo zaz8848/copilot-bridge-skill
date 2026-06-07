@@ -311,6 +311,70 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
     display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 14px;
   }
+
+  /* ─── Trends charts ─── */
+  .charts-grid {
+    display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr);
+    gap: 18px; margin-bottom: 36px;
+  }
+  .chart-card {
+    background: var(--paper); border: 1px solid var(--rule);
+    padding: 18px 20px 14px; position: relative;
+  }
+  .chart-card::before {
+    content: ''; position: absolute; left: 0; top: 0; width: 3px; bottom: 0;
+    background: var(--terra); opacity: 0.5;
+  }
+  .chart-head { margin-bottom: 14px; }
+  .chart-head .eyebrow {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-mute);
+  }
+  .chart-head h3 {
+    font-family: var(--serif); font-weight: 400; font-size: 18px;
+    letter-spacing: -0.015em; margin-top: 4px; color: var(--ink);
+  }
+  .chart-body { height: 180px; }
+  .chart-body svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .chart-legend {
+    margin-top: 10px; display: flex; gap: 16px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-mute);
+  }
+  .chart-legend i.sw {
+    display: inline-block; width: 10px; height: 10px; margin-right: 6px;
+    vertical-align: middle; border-radius: 1px;
+  }
+  .chart-legend i.sw.ink { background: var(--ink); }
+  .chart-legend i.sw.terra { background: var(--terra); }
+  /* SVG 内部样式 */
+  .chart-body .axis-label {
+    font-family: var(--mono); font-size: 9px; fill: var(--ink-faint);
+    letter-spacing: 0.05em;
+  }
+  .chart-body .axis-tick { stroke: var(--rule); stroke-width: 1; }
+  .chart-body .bar.created { fill: var(--ink); opacity: 0.78; }
+  .chart-body .bar.replied { fill: var(--terra); opacity: 0.85; }
+  .chart-body .bar:hover { opacity: 1; }
+  .chart-body .line.created { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+  .chart-body .line.replied { fill: none; stroke: var(--terra); stroke-width: 1.5; }
+  .chart-body .dot.created { fill: var(--ink); }
+  .chart-body .dot.replied { fill: var(--terra); }
+  .chart-body .donut-label {
+    font-family: var(--mono); font-size: 9.5px; fill: var(--ink-mute);
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .chart-body .donut-value {
+    font-family: var(--serif); font-size: 26px; fill: var(--ink);
+  }
+  .chart-body .donut-key {
+    font-family: var(--mono); font-size: 10px; fill: var(--ink-soft);
+  }
+  @media (max-width: 980px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-body { height: 200px; }
+  }
+
   .resident {
     background: var(--paper); border: 1px solid var(--rule);
     padding: 18px 20px 16px;
@@ -699,6 +763,28 @@ export const ATELIER_DASHBOARD_HTML = `<!doctype html>
     <span class="count" id="featured-count">&mdash;</span>
   </div>
   <div class="featured-grid" id="featured-grid"></div>
+
+  <!-- ─── Trends 区（图表） ─── -->
+  <div class="section-title">
+    <h2><em>Trends</em></h2>
+    <span class="count" id="charts-updated">&mdash;</span>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card chart-wide">
+      <div class="chart-head"><span class="eyebrow">Past 24 hours</span><h3>Hourly activity</h3></div>
+      <div class="chart-body" id="chart-hourly"></div>
+      <div class="chart-legend"><span><i class="sw ink"></i>Cards sent</span><span><i class="sw terra"></i>You replied</span></div>
+    </div>
+    <div class="chart-card chart-wide">
+      <div class="chart-head"><span class="eyebrow">Past 14 days</span><h3>Daily trend</h3></div>
+      <div class="chart-body" id="chart-daily"></div>
+      <div class="chart-legend"><span><i class="sw ink"></i>Cards sent</span><span><i class="sw terra"></i>You replied</span></div>
+    </div>
+    <div class="chart-card chart-narrow">
+      <div class="chart-head"><span class="eyebrow">All time</span><h3>Status mix</h3></div>
+      <div class="chart-body" id="chart-status"></div>
+    </div>
+  </div>
 
   <div class="section-title">
     <h2>All <em>companions</em></h2>
@@ -1485,6 +1571,7 @@ async function refresh() {
   try {
     await loadAgents();
     document.getElementById('lastUpdate').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB');
+    loadCharts(); // fire-and-forget
     if (state.currentProject) {
       state.preview.clear();
       const lim = state.currentLimit || HISTORY_INITIAL_LIMIT;
@@ -1498,6 +1585,151 @@ async function refresh() {
   } catch (e) {
     showToast('Refresh failed: ' + e.message);
   }
+}
+
+// ── Charts ───────────────────────────────────────────────
+async function loadCharts() {
+  try {
+    const r = await fetchJSON('/api/dashboard/charts');
+    document.getElementById('charts-updated').textContent = 'snapshot ' + new Date(r.generated_at).toLocaleTimeString('en-GB');
+    renderHourly(r.hourly_24h || []);
+    renderDaily(r.daily_14d || []);
+    renderStatusDonut(r.status_distribution || []);
+  } catch (e) {
+    // 失败就让上一次的图留着，不弹错以免太吵
+    console.warn('loadCharts failed:', e);
+  }
+}
+
+// 通用：返回 SVG 字符串包装器（viewBox 标准化到 0 0 w h）
+function svgFrame(w, h, inner) {
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' + inner + '</svg>';
+}
+
+function renderHourly(buckets) {
+  const el = document.getElementById('chart-hourly');
+  if (!el) return;
+  const W = 600, H = 180, padL = 28, padR = 8, padT = 8, padB = 22;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const n = buckets.length;
+  if (!n) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+  const max = Math.max(1, ...buckets.map(b => Math.max(b.created, b.replied)));
+  // 每个 hour 一组双柱
+  const groupW = plotW / n;
+  const barW = Math.max(2, groupW * 0.36);
+  let bars = '';
+  buckets.forEach((b, i) => {
+    const x = padL + i * groupW + groupW * 0.5;
+    const hC = (b.created / max) * plotH;
+    const hR = (b.replied / max) * plotH;
+    bars += '<rect class="bar created" x="' + (x - barW - 1) + '" y="' + (padT + plotH - hC) + '" width="' + barW + '" height="' + hC + '"><title>' + fmtHour(b.ts) + ': ' + b.created + ' sent</title></rect>';
+    bars += '<rect class="bar replied" x="' + (x + 1) + '" y="' + (padT + plotH - hR) + '" width="' + barW + '" height="' + hR + '"><title>' + fmtHour(b.ts) + ': ' + b.replied + ' replied</title></rect>';
+  });
+  // x 轴 tick：6 个（每 4h 一个）
+  let ticks = '';
+  for (let i = 0; i < n; i += 4) {
+    const x = padL + i * groupW + groupW * 0.5;
+    ticks += '<text class="axis-label" x="' + x + '" y="' + (H - 6) + '" text-anchor="middle">' + fmtHour(buckets[i].ts) + '</text>';
+  }
+  // y 轴 max
+  const yMax = '<text class="axis-label" x="' + (padL - 4) + '" y="' + (padT + 8) + '" text-anchor="end">' + max + '</text>';
+  const yZero = '<text class="axis-label" x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end">0</text>';
+  const baseline = '<line class="axis-tick" x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (W - padR) + '" y2="' + (padT + plotH) + '" />';
+  el.innerHTML = svgFrame(W, H, ticks + baseline + bars + yMax + yZero);
+}
+
+function renderDaily(buckets) {
+  const el = document.getElementById('chart-daily');
+  if (!el) return;
+  const W = 600, H = 180, padL = 28, padR = 8, padT = 12, padB = 22;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const n = buckets.length;
+  if (!n) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+  const max = Math.max(1, ...buckets.map(b => Math.max(b.created, b.replied)));
+  const xs = i => padL + (n === 1 ? plotW / 2 : (i * plotW) / (n - 1));
+  const ys = v => padT + plotH - (v / max) * plotH;
+  let pathC = '', pathR = '', dots = '';
+  buckets.forEach((b, i) => {
+    const x = xs(i);
+    const yC = ys(b.created), yR = ys(b.replied);
+    pathC += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + yC.toFixed(1) + ' ';
+    pathR += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + yR.toFixed(1) + ' ';
+    dots += '<circle class="dot created" cx="' + x + '" cy="' + yC + '" r="2.5"><title>' + fmtDay(b.ts) + ': ' + b.created + ' sent</title></circle>';
+    dots += '<circle class="dot replied" cx="' + x + '" cy="' + yR + '" r="2.5"><title>' + fmtDay(b.ts) + ': ' + b.replied + ' replied</title></circle>';
+  });
+  // x 轴：均匀 4 个 tick（第 0/4/8/13）
+  let ticks = '';
+  const tickAt = [0, Math.floor(n / 3), Math.floor((n * 2) / 3), n - 1];
+  tickAt.forEach(i => {
+    const x = xs(i);
+    ticks += '<text class="axis-label" x="' + x + '" y="' + (H - 6) + '" text-anchor="middle">' + fmtDay(buckets[i].ts) + '</text>';
+  });
+  const yMax = '<text class="axis-label" x="' + (padL - 4) + '" y="' + (padT + 8) + '" text-anchor="end">' + max + '</text>';
+  const yZero = '<text class="axis-label" x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end">0</text>';
+  const baseline = '<line class="axis-tick" x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (W - padR) + '" y2="' + (padT + plotH) + '" />';
+  el.innerHTML = svgFrame(W, H,
+    ticks + baseline +
+    '<path class="line created" d="' + pathC + '" />' +
+    '<path class="line replied" d="' + pathR + '" />' +
+    dots + yMax + yZero
+  );
+}
+
+function renderStatusDonut(rows) {
+  const el = document.getElementById('chart-status');
+  if (!el) return;
+  const W = 220, H = 180;
+  const total = rows.reduce((s, r) => s + Number(r.n || 0), 0);
+  if (!total) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+  const cx = 70, cy = 90, rOuter = 60, rInner = 38;
+  const colorMap = {
+    pending: '#c08a2b',
+    replied: '#5b9e8a',
+    expired: 'rgba(31,26,20,0.32)',
+    cancelled: 'rgba(31,26,20,0.18)',
+  };
+  // 排序：replied → pending → cancelled → expired（让主要色块占大头）
+  const order = ['replied', 'pending', 'cancelled', 'expired'];
+  const sorted = order
+    .map(k => rows.find(r => r.status === k))
+    .filter(Boolean)
+    .concat(rows.filter(r => !order.includes(r.status)));
+  let cur = -Math.PI / 2; // start at 12 o'clock
+  let arcs = '';
+  let legend = '';
+  sorted.forEach((r, i) => {
+    const frac = Number(r.n) / total;
+    if (frac <= 0) return;
+    const end = cur + frac * Math.PI * 2;
+    const large = frac > 0.5 ? 1 : 0;
+    const x1 = cx + Math.cos(cur) * rOuter, y1 = cy + Math.sin(cur) * rOuter;
+    const x2 = cx + Math.cos(end) * rOuter, y2 = cy + Math.sin(end) * rOuter;
+    const x3 = cx + Math.cos(end) * rInner, y3 = cy + Math.sin(end) * rInner;
+    const x4 = cx + Math.cos(cur) * rInner, y4 = cy + Math.sin(cur) * rInner;
+    const fill = colorMap[r.status] || '#999';
+    arcs += '<path d="M' + x1 + ',' + y1 + ' A' + rOuter + ',' + rOuter + ' 0 ' + large + ' 1 ' + x2 + ',' + y2 + ' L' + x3 + ',' + y3 + ' A' + rInner + ',' + rInner + ' 0 ' + large + ' 0 ' + x4 + ',' + y4 + ' Z" fill="' + fill + '"><title>' + r.status + ': ' + r.n + ' (' + (frac * 100).toFixed(1) + '%)</title></path>';
+    legend += '<g transform="translate(150, ' + (40 + i * 22) + ')">' +
+      '<rect x="0" y="-9" width="10" height="10" fill="' + fill + '" />' +
+      '<text class="donut-key" x="16" y="0">' + escapeHtml(r.status) + ' &middot; ' + r.n + '</text>' +
+      '</g>';
+    cur = end;
+  });
+  const center =
+    '<text class="donut-value" x="' + cx + '" y="' + (cy + 4) + '" text-anchor="middle">' + total + '</text>' +
+    '<text class="donut-label" x="' + cx + '" y="' + (cy + 22) + '" text-anchor="middle">TOTAL</text>';
+  el.innerHTML = svgFrame(W, H, arcs + legend + center);
+}
+
+function fmtHour(ms) {
+  const d = new Date(ms);
+  const h = String(d.getHours()).padStart(2, '0');
+  return h + ':00';
+}
+function fmtDay(ms) {
+  const d = new Date(ms);
+  return (d.getMonth() + 1) + '/' + d.getDate();
 }
 
 // ── Modal ────────────────────────────────────────────────

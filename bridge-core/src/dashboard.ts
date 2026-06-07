@@ -265,6 +265,74 @@ export function mountDashboard(app: Express) {
     res.json({ project_name: project, count: enriched.length, tasks: enriched });
   });
 
+  // --- API: 图表聚合（24h 小时桶 / 14 天日桶 / 状态分布） ---
+  app.get("/api/dashboard/charts", (req: Request, res: Response) => {
+    if (!ensureLocalOnly(req, res)) return;
+    const now = Date.now();
+    const day24Ms = 24 * 3600 * 1000;
+    const day14Ms = 14 * 86400 * 1000;
+    const since24 = now - day24Ms;
+    const since14 = now - day14Ms;
+
+    // #1 过去 24h 按小时分桶
+    const tasks24 = db.prepare(
+      `SELECT created_at, reply_at FROM tasks WHERE created_at >= ?`
+    ).all(since24) as Array<{ created_at: number; reply_at: number | null }>;
+    const hourBuckets: Array<{ ts: number; created: number; replied: number }> = [];
+    const hour = 3600 * 1000;
+    const startHour = Math.floor(since24 / hour) * hour;
+    for (let i = 0; i < 24; i++) hourBuckets.push({ ts: startHour + i * hour, created: 0, replied: 0 });
+    for (const t of tasks24) {
+      const cBucket = Math.floor((t.created_at - startHour) / hour);
+      if (cBucket >= 0 && cBucket < 24) hourBuckets[cBucket].created++;
+      if (t.reply_at && t.reply_at >= since24) {
+        const rBucket = Math.floor((t.reply_at - startHour) / hour);
+        if (rBucket >= 0 && rBucket < 24) hourBuckets[rBucket].replied++;
+      }
+    }
+
+    // #2 过去 14 天按日分桶（用本地 00:00 切分）
+    const dayMs = 86400 * 1000;
+    const tasks14 = db.prepare(
+      `SELECT created_at, reply_at, status FROM tasks WHERE created_at >= ?`
+    ).all(since14) as Array<{ created_at: number; reply_at: number | null; status: string }>;
+    const todayLocal = new Date();
+    todayLocal.setHours(0, 0, 0, 0);
+    const dayBuckets: Array<{ ts: number; created: number; replied: number }> = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(todayLocal);
+      d.setDate(d.getDate() - i);
+      dayBuckets.push({ ts: d.getTime(), created: 0, replied: 0 });
+    }
+    function localDayKey(ms: number) {
+      const d = new Date(ms);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    }
+    const dayIdx = new Map<number, number>();
+    dayBuckets.forEach((b, i) => dayIdx.set(b.ts, i));
+    for (const t of tasks14) {
+      const ci = dayIdx.get(localDayKey(t.created_at));
+      if (ci !== undefined) dayBuckets[ci].created++;
+      if (t.reply_at) {
+        const ri = dayIdx.get(localDayKey(t.reply_at));
+        if (ri !== undefined) dayBuckets[ri].replied++;
+      }
+    }
+
+    // #5 全局状态分布
+    const statusRows = db.prepare(
+      `SELECT status, COUNT(*) AS n FROM tasks GROUP BY status`
+    ).all() as Array<{ status: string; n: number }>;
+
+    res.json({
+      generated_at: now,
+      hourly_24h: hourBuckets,
+      daily_14d: dayBuckets,
+      status_distribution: statusRows,
+    });
+  });
+
   app.get("/dashboard", (req: Request, res: Response) => {
     if (!ensureLocalOnly(req, res)) return;
     res.setHeader("Content-Type", "text/html; charset=utf-8");
