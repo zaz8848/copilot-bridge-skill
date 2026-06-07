@@ -399,6 +399,18 @@ function start() {
     logConfigSafe();
     initDb();
 
+    // 全局崩溃捕获：不让进程静默挂掉，写日志让后续可定位。
+    // 飞书 webhook 在 bridge 死的时候直接 fail，丢回复，所以这里必须能 surviv 异步异常。
+    process.on('uncaughtException', (err: Error) => {
+        console.error(`[bridge] FATAL uncaughtException at ${new Date().toISOString()}:`);
+        console.error(err.stack || err.message || String(err));
+        // 不退出：try-best 继续跑，让飞书 webhook 接下一条消息
+    });
+    process.on('unhandledRejection', (reason: unknown) => {
+        console.error(`[bridge] unhandledRejection at ${new Date().toISOString()}:`);
+        console.error(reason instanceof Error ? (reason.stack || reason.message) : String(reason));
+    });
+
     // 确保 images 目录存在
     try {
         fs.mkdirSync(config.paths.images, { recursive: true });
