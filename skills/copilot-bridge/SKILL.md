@@ -81,13 +81,19 @@ run_in_terminal(
 
 ### stdout 协议（AI 解析必看）
 
-| 标记 | 含义 | AI 该怎么办 |
-|------|------|-----------|
-| `TASK_ID: xxxxx` | 卡片已发出 | 记下，fetch 失败时用 ResumeTaskId 接力 |
-| `REPLY_JSON: {...}` | 收到回复 | 消费、退出循环 |
-| `REPLY_TEXT: 内容` | 收到回复（纯文本，含 `[图片](path)` 字面量） | 看到 `[图片](xxx)` 立刻调 `view_image` |
-| `TIMEOUT: xxxxx` | 超时未回复 | 默认 0=永不超时 |
+脚本输出**全 ASCII**（避免 PS 5.1 GBK 乱码），且**沉默等回复**（不每轮打 heartbeat，省 AI 上下文）：
+
+| 标记 | 何时出现 | AI 该怎么办 |
+|------|---------|-----------|
+| `TASK_ID: xxxxx` | 卡发出后立即 | 记下，fetch 失败时用 ResumeTaskId 接力 |
+| `[feishu-send-and-wait] card sent task_id=... feishu_message_id=...` | 卡发出后立即 | 仅日志 |
+| `REPLY_JSON: {...}` | 收到回复时 | 消费、退出循环 |
+| `REPLY_TEXT: 内容` | 收到回复时（含 `[图片](path)` 字面量） | 看到 `[图片](xxx)` 立刻调 `view_image` |
+| `TIMEOUT: xxxxx` | 达到 `-MaxWaitSeconds` 仍未回复 | 默认 `-MaxWaitSeconds 0` = **永等**，正常不会出现 |
 | `ERROR: 错误` | notify 失败或 task 已过期 | **不重发卡**，调 resume 看是否已路由 |
+| `[... wait fetch failed ...retrying...]` | 偶发网络断 | 仅日志，脚本自动用 task_id 续杯 |
+
+> 等回复期间脚本**完全沉默**——没新行 ≠ 卡住，而是 long-poll 在底层 50s/轮无声续杯。看到 stdout 不增长就耐心等，看到新行才动作。
 
 ---
 
