@@ -31,9 +31,9 @@ try {
 
 $count = if ($r.replies) { $r.replies.Count } else { 0 }
 if ($count -eq 0) {
-    Write-Host "[feishu-resume] 收件箱为空 (project=$ProjectName)"
+    Write-Host "[feishu-resume] inbox empty (project=$ProjectName)"
 } else {
-    Write-Host "[feishu-resume] 收件箱有 $count 条消息 (project=$ProjectName):"
+    Write-Host "[feishu-resume] inbox has $count messages (project=$ProjectName):"
     $i = 0
     foreach ($m in $r.replies) {
         $i++

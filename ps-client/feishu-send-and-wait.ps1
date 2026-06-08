@@ -34,7 +34,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($WorkspacePath)) { $WorkspacePath = $PWD.Path }
-if ([string]::IsNullOrWhiteSpace($ProjectName))   { $ProjectName   = Split-Path -Leaf $WorkspacePath }
+if ([string]::IsNullOrWhiteSpace($ProjectName)) { $ProjectName = Split-Path -Leaf $WorkspacePath }
 
 function Invoke-JsonPost {
     param([string]$Url, [hashtable]$Body)
@@ -64,21 +64,21 @@ if ([string]::IsNullOrWhiteSpace($taskId)) {
     }
     $taskId = $notify.task_id
     Write-Host "TASK_ID: $taskId"
-    Write-Host "[feishu-send-and-wait] 卡片已发送 task_id=$taskId  feishu_message_id=$($notify.feishu_message_id)"
+    Write-Host "[feishu-send-and-wait] card sent  task_id=$taskId  feishu_message_id=$($notify.feishu_message_id)"
 }
 else {
     Write-Host "TASK_ID: $taskId"
-    Write-Host "[feishu-send-and-wait] 接力等待已有 task_id=$taskId"
+    Write-Host "[feishu-send-and-wait] resuming existing task_id=$taskId"
 }
 
-# Step 2: 短挂续杯轮询
+# Step 2: short-hang long-poll loop
 $startTs = Get-Date
 $round = 0
 while ($true) {
     $round++
     try {
         $r = Invoke-RestMethod -Uri "$BridgeUrl/api/wait/$taskId`?timeout=$PollTimeoutSec" -TimeoutSec ($PollTimeoutSec + 10)
-        Write-Host "[feishu-send-and-wait] 收到回复 round=$round"
+        Write-Host "[feishu-send-and-wait] reply received round=$round"
         Write-Host "REPLY_JSON: $($r | ConvertTo-Json -Compress -Depth 6)"
         Write-Host "REPLY_TEXT: $($r.reply)"
         exit 0
@@ -89,9 +89,9 @@ while ($true) {
         if ($resp -ne $null) { try { $status = [int]$resp.StatusCode } catch { } }
 
         if ($status -eq 408) {
-            # 短挂超时，正常情况，继续下一轮
+            # short-hang timeout, normal, continue next round
             $elapsed = [int]((Get-Date) - $startTs).TotalSeconds
-            Write-Host "[feishu-send-and-wait] poll round=$round elapsed=${elapsed}s, 继续等..."
+            Write-Host "[feishu-send-and-wait] poll round=$round elapsed=${elapsed}s, waiting..."
             if ($MaxWaitSeconds -gt 0 -and $elapsed -ge $MaxWaitSeconds) {
                 Write-Host "TIMEOUT: $taskId (MaxWaitSeconds=$MaxWaitSeconds reached)"
                 exit 3
@@ -108,8 +108,8 @@ while ($true) {
             exit 5
         }
 
-        # 网络层 fetch 失败：不重发卡，等 2 秒后用 task_id 接着 wait（v0.0.11 硬规则）
-        Write-Host "[feishu-send-and-wait] wait fetch failed (status=$status msg=$($_.Exception.Message)), 2s 后用 task_id 续杯..."
+        # network-level fetch failure: do NOT resend card, wait 2s then retry with same task_id (v0.0.11 hard rule)
+        Write-Host "[feishu-send-and-wait] wait fetch failed (status=$status msg=$($_.Exception.Message)), retrying with task_id in 2s..."
         Start-Sleep -Seconds 2
         continue
     }

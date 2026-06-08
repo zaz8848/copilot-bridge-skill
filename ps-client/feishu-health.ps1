@@ -1,4 +1,4 @@
-﻿# feishu-health.ps1
+# feishu-health.ps1
 # 检查 bridge-core 是否存活。
 #
 # 用法：
@@ -12,8 +12,6 @@ param(
     [int]$TimeoutSec = 5
 )
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
 
 try {
@@ -24,6 +22,6 @@ try {
 }
 catch {
     Write-Host "[feishu-health] DOWN  $($_.Exception.Message)"
-    Write-Host "[feishu-health] 请先在仓库根目录跑 .\scripts\start.ps1 启动 bridge-core"
+    Write-Host "[feishu-health] Start bridge-core first: run .\scripts\start.ps1 in the repo root"
     exit 1
 }
