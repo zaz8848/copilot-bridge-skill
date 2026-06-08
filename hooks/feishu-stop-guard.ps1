@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 
 # Lightweight debug log — every hook invocation writes one line so we can
 # verify the hook actually fires when the model ends a turn.
-$debugDir  = Join-Path $env:USERPROFILE '.copilot\hooks\debug'
+$debugDir = Join-Path $env:USERPROFILE '.copilot\hooks\debug'
 $debugFile = Join-Path $debugDir 'stop-guard.log'
 if (-not (Test-Path $debugDir)) { New-Item -ItemType Directory -Force -Path $debugDir | Out-Null }
 function LogLine { param([string]$s) Add-Content -Path $debugFile -Value ("{0}  {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'), $s) }
