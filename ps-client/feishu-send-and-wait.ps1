@@ -78,7 +78,6 @@ while ($true) {
     $round++
     try {
         $r = Invoke-RestMethod -Uri "$BridgeUrl/api/wait/$taskId`?timeout=$PollTimeoutSec" -TimeoutSec ($PollTimeoutSec + 10)
-        Write-Host "[feishu-send-and-wait] reply received round=$round"
         Write-Host "REPLY_JSON: $($r | ConvertTo-Json -Compress -Depth 6)"
         Write-Host "REPLY_TEXT: $($r.reply)"
         exit 0
@@ -89,9 +88,8 @@ while ($true) {
         if ($resp -ne $null) { try { $status = [int]$resp.StatusCode } catch { } }
 
         if ($status -eq 408) {
-            # short-hang timeout, normal, continue next round
+            # short-hang timeout, normal, silently continue next round (avoid spamming AI context)
             $elapsed = [int]((Get-Date) - $startTs).TotalSeconds
-            Write-Host "[feishu-send-and-wait] poll round=$round elapsed=${elapsed}s, waiting..."
             if ($MaxWaitSeconds -gt 0 -and $elapsed -ge $MaxWaitSeconds) {
                 Write-Host "TIMEOUT: $taskId (MaxWaitSeconds=$MaxWaitSeconds reached)"
                 exit 3
