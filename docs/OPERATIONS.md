@@ -82,6 +82,7 @@ Invoke-WebRequest -Uri "https://copilot-bridge.top/health" -TimeoutSec 10 -UseBa
 
 **530 错误** = cloudflared 服务在跑但找不到隧道源 → 检查 `C:\ProgramData\Cloudflared\` 凭证文件还在
 **502 错误** = bridge-core 没跑 → 起 bridge
+**404 错误，且本地 `Invoke-RestMethod http://127.0.0.1:3000/health` 是 200** = cloudflared 转发到了**错的进程**。99% 是 config.yml 里 `service:` 写了 `http://localhost:3000`，且本机另一个项目占了 `0.0.0.0:3000`（Windows 上 localhost 优先解析到 0.0.0.0）。修法：把 config 里所有 `localhost` 改成 `127.0.0.1`（显式 IP 不走 hostname 解析），然后 `Restart-Service cloudflared`。检查谁占了 0.0.0.0:3000：`netstat -ano | findstr ":3000.*0.0.0.0"`
 **超时** = 本机 → Cloudflare 网络抽风（GFW 等），换网络重试；飞书后端走不同路径一般不受影响
 
 ### 2.3 AI 发卡说"无法连接到远程服务器"

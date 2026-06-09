@@ -9,8 +9,11 @@ tunnel: <填你的隧道 UUID，cloudflared tunnel create 后输出>
 credentials-file: C:\ProgramData\Cloudflared\<你的隧道 UUID>.json
 
 # 路径白名单（Plan 3 安全收紧）
+# !!! service 必须用 127.0.0.1，不要写 localhost。
+# Windows 上 localhost 优先解析到 0.0.0.0，若本机另一个项目占用 0.0.0.0:3000，
+# cloudflared 会静默转发到那个错的进程并返 404。显式 127.0.0.1 不走 hostname 解析。
 ingress:
   - hostname: <你的域名，如 copilot-bridge.example.com>
     path: ^/(webhook/feishu|health)$
-    service: http://localhost:3000
+    service: http://127.0.0.1:3000
   - service: http_status:404

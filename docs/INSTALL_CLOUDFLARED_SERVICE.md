@@ -14,7 +14,7 @@
 | 管理员权限 | 装 Windows 服务必需 | 让用户用管理员 PowerShell |
 | 网络能连 Cloudflare | 用于 OAuth + 隧道 QUIC | `Test-NetConnection api.cloudflare.com -Port 443` |
 | 域名 `copilot-bridge.top` 已在 Cloudflare 接管 | NS 已生效，dashboard 状态 Active | `nslookup -type=ns copilot-bridge.top 1.1.1.1` 出现 `*.ns.cloudflare.com` |
-| `bridge-core` 跑在本机 `localhost:3000` | 隧道转发的目标 | `Invoke-RestMethod http://127.0.0.1:3000/health` |
+| `bridge-core` 跑在本机 `127.0.0.1:3000` | 隘道转发的目标（**勿用 localhost**，见下面注意） | `Invoke-RestMethod http://127.0.0.1:3000/health` |
 
 如果 NS 没生效或域名还在腾讯云：先回去做 NS 切换（见 `PROJECT_STATUS.md` 第十五批"P0 #1"）。
 
@@ -109,13 +109,15 @@ credentials-file: C:\ProgramData\Cloudflared\<UUID>.json
 origincert: C:\ProgramData\Cloudflared\cert.pem
 
 # Plan 3 路径白名单
+# !!! 必须用 127.0.0.1，不要用 localhost。Windows 上 localhost 优先解析到 0.0.0.0，
+# 如果本机另一个项目占着 0.0.0.0:3000，cloudflared 会静默转发到错的进程返 404。
 ingress:
   - hostname: copilot-bridge.top
     path: /webhook/feishu
-    service: http://localhost:3000
+    service: http://127.0.0.1:3000
   - hostname: copilot-bridge.top
     path: /health
-    service: http://localhost:3000
+    service: http://127.0.0.1:3000
   - service: http_status:404
 ```
 

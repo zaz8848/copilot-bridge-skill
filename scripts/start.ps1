@@ -51,11 +51,20 @@ if (-not (Test-Path "bridge-core\dist\index.js")) {
 }
 
 # 2.5 自动清理：如果已有 bridge 占着 3000 / 旧 cloudflared 在跑 → 杀
-$port3000 = (Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Where-Object State -eq Listen)
-if ($port3000) {
-  Write-Host "[start] 检测到端口 3000 被占用 (pid=$($port3000.OwningProcess))，杀旧进程..." -ForegroundColor Yellow
-  Stop-Process -Id $port3000.OwningProcess -Force -ErrorAction SilentlyContinue
+# 注意：只杀 127.0.0.1:3000（bridge-core 的 binding）。如果另一个进程占 0.0.0.0:3000
+# （比如别人项目的 server.js），不要杀别人的进程——只警告 + 让 bridge 失败暴露问题。
+$port3000All = @(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Where-Object State -eq Listen)
+$ownPort = $port3000All | Where-Object { $_.LocalAddress -eq '127.0.0.1' } | Select-Object -First 1
+$foreignPort = $port3000All | Where-Object { $_.LocalAddress -in @('0.0.0.0','::') } | Select-Object -First 1
+if ($ownPort) {
+  Write-Host "[start] 检测到端口 127.0.0.1:3000 被占用 (pid=$($ownPort.OwningProcess))，杀旧 bridge..." -ForegroundColor Yellow
+  Stop-Process -Id $ownPort.OwningProcess -Force -ErrorAction SilentlyContinue
   Start-Sleep -Seconds 1
+}
+if ($foreignPort) {
+  Write-Host "[start] 警告：另一个进程在监听 0.0.0.0:3000 (pid=$($foreignPort.OwningProcess))" -ForegroundColor Red
+  Write-Host "[start]   这不会阻止 bridge 起来（bridge 绑 127.0.0.1），但会让 cloudflared 用 'localhost' 时静默转到错的进程。" -ForegroundColor Red
+  Write-Host "[start]   确认 cloudflared config.yml 的 service 字段用 'http://127.0.0.1:3000' 而非 'http://localhost:3000'。" -ForegroundColor Red
 }
 Get-Process cloudflared -ErrorAction SilentlyContinue | ForEach-Object {
   Write-Host "[start] 杀旧 cloudflared pid=$($_.Id)" -ForegroundColor Yellow
@@ -132,7 +141,7 @@ if ($tunnelMode -eq "named") {
 else {
   Write-Host "[start] 启动 cloudflared 临时隧道（兜底模式）..." -ForegroundColor Cyan
   $cfProc = Start-Process -FilePath "cloudflared" `
-    -ArgumentList "tunnel", "--url", "http://localhost:3000" `
+    -ArgumentList "tunnel", "--url", "http://127.0.0.1:3000" `
     -WorkingDirectory $repoRoot `
     -PassThru `
     -RedirectStandardError $cfLog `

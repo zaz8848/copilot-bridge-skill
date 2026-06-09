@@ -248,7 +248,7 @@ node dist/index.js
 
 mode=A 的话：
 ```powershell
-cloudflared tunnel --url http://localhost:3000
+cloudflared tunnel --url http://127.0.0.1:3000
 ```
 从输出 grep `https://*.trycloudflare.com`，记下来。
 
