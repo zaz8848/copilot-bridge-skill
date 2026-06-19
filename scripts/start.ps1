@@ -55,7 +55,7 @@ if (-not (Test-Path "bridge-core\dist\index.js")) {
 # （比如别人项目的 server.js），不要杀别人的进程——只警告 + 让 bridge 失败暴露问题。
 $port3000All = @(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Where-Object State -eq Listen)
 $ownPort = $port3000All | Where-Object { $_.LocalAddress -eq '127.0.0.1' } | Select-Object -First 1
-$foreignPort = $port3000All | Where-Object { $_.LocalAddress -in @('0.0.0.0','::') } | Select-Object -First 1
+$foreignPort = $port3000All | Where-Object { $_.LocalAddress -in @('0.0.0.0', '::') } | Select-Object -First 1
 if ($ownPort) {
   Write-Host "[start] 检测到端口 127.0.0.1:3000 被占用 (pid=$($ownPort.OwningProcess))，杀旧 bridge..." -ForegroundColor Yellow
   Stop-Process -Id $ownPort.OwningProcess -Force -ErrorAction SilentlyContinue

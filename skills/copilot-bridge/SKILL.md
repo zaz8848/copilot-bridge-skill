@@ -117,6 +117,27 @@ run_in_terminal(
 - 这轮是不是调过 `feishu-send-and-wait.ps1` 把话发到飞书了？
 - 没调、且本轮不是纯工具状态行 → **这轮就是违规**，必须补发飞书再说话
 
+### 规则 4：async 发送后禁止轮询 get_terminal_output
+
+`feishu-send-and-wait.ps1` 必须用 `mode: "async"` 调用。发送后：
+
+- ❌ **禁止**循环调用 `get_terminal_output` 轮询终端输出
+- ✅ **正确做法**：等待系统自动推送的 `[Terminal xxx notification: command completed]` 通知
+
+**原理**：async 模式下，VS Code agent 会在命令完成时自动收到终端通知（包含完整 stdout），不需要主动拉取。轮询会：
+1. 浪费 AI 调用次数（每次轮询消耗一次工具调用）
+2. 污染上下文（重复输出同样内容几十次）
+3. 用户体验差（看到 AI 不停 get_terminal_output 却没进展）
+
+**正确流程**：
+```
+1. run_in_terminal(..., mode: "async")  → 返回 terminal ID
+2. 输出 "飞书已发送，等待回复"（可选的状态行）
+3. 【停住，不做任何动作】
+4. 系统推送 [Terminal xxx notification: command completed]
+5. 从通知中读取 REPLY_TEXT，继续工作
+```
+
 ---
 
 ## ProjectName / WorkspacePath 怎么传

@@ -36,6 +36,32 @@ $ErrorActionPreference = "Stop"
 if ([string]::IsNullOrWhiteSpace($WorkspacePath)) { $WorkspacePath = $PWD.Path }
 if ([string]::IsNullOrWhiteSpace($ProjectName)) { $ProjectName = Split-Path -Leaf $WorkspacePath }
 
+# Step 0: 发卡前清场 —— 杀掉同 ProjectName 还在 long-poll 的【旧】feishu-send-and-wait 进程。
+# 场景：上一轮 async 发卡后, 用户没在飞书回、而是直接在 VS Code 回复 → 那个旧进程一直挂着 long-poll,
+#       会抢走以后真正发到飞书群的消息。此处在『发新卡之前』清理, 当前进程刚启动、用 -ProjectName 标识,
+#       只杀【比自己早启动】且命令行带同 ProjectName 的旧进程, 绝不误杀自己。
+try {
+    $self = $PID
+    $selfStart = (Get-Process -Id $self).StartTime
+    $stale = Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='pwsh.exe'" -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ProcessId -ne $self -and
+            $_.CommandLine -match 'feishu-send-and-wait' -and
+            $_.CommandLine -match [regex]::Escape($ProjectName)
+        }
+    foreach ($p in $stale) {
+        try {
+            $pStart = (Get-Process -Id $p.ProcessId -ErrorAction Stop).StartTime
+            if ($pStart -le $selfStart) {
+                Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+                Write-Host "[feishu-send-and-wait] cleaned stale long-poll pid=$($p.ProcessId) (project=$ProjectName)"
+            }
+        }
+        catch { }
+    }
+}
+catch { }
+
 function Invoke-JsonPost {
     param([string]$Url, [hashtable]$Body)
     $json = $Body | ConvertTo-Json -Compress -Depth 6
